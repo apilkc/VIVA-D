@@ -9,7 +9,24 @@ const { parseSocialLink } = require('./social');
 const MAX_DOWNLOAD_BYTES = 250 * 1024 * 1024;
 const DOWNLOAD_TIMEOUT_MS = 2 * 60 * 1000;
 const BUNDLED_YTDLP = path.join(__dirname, 'node_modules', 'yt-dlp-exec', 'bin', 'yt-dlp');
-const FFMPEG_BINARY = process.env.FFMPEG_BINARY || '/opt/homebrew/bin/ffmpeg';
+
+// Resolve an FFmpeg binary that actually exists. The Dockerfile installs
+// ffmpeg onto PATH (Linux); local macOS development may use Homebrew paths.
+const FFMPEG_MACOS_CANDIDATES = ['/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg'];
+function resolveFfmpeg() {
+  if (process.env.FFMPEG_BINARY && fs.existsSync(process.env.FFMPEG_BINARY)) return process.env.FFMPEG_BINARY;
+  for (const candidate of FFMPEG_MACOS_CANDIDATES) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  // Fall back to PATH (Linux containers / Railway): `which ffmpeg`.
+  try {
+    const { execSync } = require('child_process');
+    const found = execSync('command -v ffmpeg', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+    if (found) return found;
+  } catch { /* not on PATH */ }
+  return null;
+}
+const FFMPEG_BINARY = resolveFfmpeg();
 
 function findPython() {
   const configured = process.env.YTDLP_PYTHON;
