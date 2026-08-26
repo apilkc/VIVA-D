@@ -10,6 +10,8 @@ RUN apt-get update \
         python3 \
         python3-pip \
         ffmpeg \
+        build-essential \
+        python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Node builds native modules (better-sqlite3) against the runtime ABI.
