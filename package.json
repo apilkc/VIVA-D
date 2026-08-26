@@ -1,0 +1,26 @@
+{
+  "name": "rasuwa-flood-evidence-map",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Public evidence map for the Rasuwa (Bhote Koshi) flood — archive uploaded photos/videos in Google Drive with social-media provenance and map metadata.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "drive:auth": "node scripts/google-drive-auth.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.2.0",
+    "dotenv": "^16.4.7",
+    "exif-reader": "^2.0.3",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "googleapis": "^176.0.0",
+    "multer": "^2.2.0",
+    "yt-dlp-exec": "^1.0.2"
+  }
+}

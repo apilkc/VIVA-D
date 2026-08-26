@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rasuwa Flood Evidence Map</title>
+  <meta name="description" content="Public map of photos and videos documenting the August 26, 2026 flash flood on the Bhote Koshi river — Timure, Syaphrubesi and Rasuwa district, Nepal.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗺️</text></svg>">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-title">Rasuwa Flood Evidence Map</div>
+      <div class="brand-sub">Bhote Koshi &middot; Timure &amp; Syaphrubesi &middot; 26 August 2026</div>
+    </div>
+    <nav class="topnav" aria-label="Main">
+      <span id="countChip" class="count-chip" title="Items currently on the map">0 items</span>
+      <button id="howBtn" class="btn-ghost" type="button">How it works</button>
+      <button id="addBtn" class="btn-primary" type="button">＋ Add media</button>
+    </nav>
+  </header>
+
+  <main class="map-wrap">
+    <div id="map" role="application" aria-label="Map of flood evidence"></div>
+
+    <div class="map-style-control" role="group" aria-label="Map type">
+      <button id="streetMapBtn" class="map-style-btn active" type="button" aria-pressed="true">Street</button>
+      <button id="satelliteMapBtn" class="map-style-btn" type="button" aria-pressed="false">Satellite</button>
+    </div>
+
+    <div id="emptyState" class="empty-state hidden">
+      <div class="empty-card">
+        <div class="empty-icon">🗺️</div>
+        <h2>No media yet</h2>
+        <p>Nothing has been added to the map so far. If you have photos or videos from the flood area, add them — every item helps document what happened.</p>
+        <button id="emptyAddBtn" class="btn-primary" type="button">＋ Add the first item</button>
+      </div>
+    </div>
+
+    <div id="statusBar" class="status-bar hidden" role="status"></div>
+
+    <div class="legend" aria-hidden="true">
+      <span class="legend-item"><span class="dot photo"></span>Photo</span>
+      <span class="legend-item"><span class="dot video"></span>Video</span>
+    </div>
+
+    <footer class="map-footer">
+      <div class="footer-inner">
+        <div class="footer-text">
+          <strong>Rasuwa Flood Evidence Map</strong> — a community archive documenting photos and videos from the Bhote Koshi flash flood of 26 August 2026. Every item is stored in Google Drive for permanent, verifiable record-keeping.
+        </div>
+        <div class="footer-links">
+          <a href="https://drive.google.com/drive/folders/1VtWiMw_A3j-4lB9VEf15kAwpMuB7ac6_" target="_blank" rel="noopener noreferrer" class="footer-link">📂 Browse all data in Google Drive</a>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <div id="uploadModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="uploadTitle">
+    <div class="modal-card modal-card-tall">
+      <div class="modal-head">
+        <h2 id="uploadTitle">Add media</h2>
+        <button class="modal-x" type="button" data-close="uploadModal" aria-label="Close">✕</button>
+      </div>
+
+      <div id="formErrors" class="form-errors hidden"></div>
+
+      <form id="uploadForm" novalidate>
+        <!-- Source section -->
+        <fieldset class="mode-row">
+          <legend class="required">How are you adding this media?</legend>
+          <label class="radio-card"><input type="radio" name="ingest_mode" id="modeUpload" value="upload" checked>📁 Upload from this device</label>
+          <label class="radio-card"><input type="radio" name="ingest_mode" id="modeImport" value="import">🔗 Import from Facebook, X, or Twitter</label>
+        </fieldset>
+
+        <div id="uploadInputBlock">
+          <label class="required" for="mediaFile">Photo or video file</label>
+          <input type="file" id="mediaFile" name="media" accept="image/*,video/*">
+          <p class="field-hint">The file will be archived into the project's Google Drive folder. Maximum size: 250 MB. Photos with GPS data will auto-fill the location.</p>
+          <p id="archiveStatus" class="archive-status">Checking Google Drive archive connection…</p>
+
+          <div id="localPreview" class="local-preview hidden">
+            <img id="localImagePreview" class="local-media hidden" alt="Selected photo preview">
+            <video id="localVideoPreview" class="local-media hidden" controls preload="metadata"></video>
+            <p id="localFileName" class="preview-file-name"></p>
+          </div>
+        </div>
+
+        <div id="importInputBlock" class="hidden">
+          <label class="required" for="sourceUrl">Original Facebook, X, or Twitter post</label>
+          <input type="url" id="sourceUrl" name="source_url" placeholder="https://facebook.com/... or https://x.com/..." autocomplete="off">
+          <p class="field-hint">The server will download one publicly accessible media item from this post, archive it in Google Drive, and preserve this URL as provenance.</p>
+          <p id="sourceHint" class="source-hint hidden"></p>
+        </div>
+
+        <fieldset id="mediaTypeBlock" class="radio-row">
+          <legend class="required">What is it?</legend>
+          <label class="radio-card"><input type="radio" name="media_type" value="photo" checked>📷 Photo</label>
+          <label class="radio-card"><input type="radio" name="media_type" value="video">🎥 Video</label>
+        </fieldset>
+
+        <!-- Location section -->
+        <div class="form-section">
+          <span class="form-label required">Where was it taken?</span>
+          <label class="ack unknown-location">
+            <input type="checkbox" id="unknownLocation">
+            <span>I don't know the exact location — place it approximately along the river</span>
+          </label>
+          <div id="miniMapWrap">
+            <div id="miniMap" class="mini-map"></div>
+          </div>
+          <p class="field-hint" id="locStatus">Click the map to drop the pin at the exact spot.</p>
+          <div class="inline-row">
+            <input type="text" id="locationName" name="location_name" placeholder="Place name (auto-filled, editable)" autocomplete="off">
+            <button class="btn-ghost" type="button" id="useMyLocation">📍 Use my location</button>
+          </div>
+        </div>
+
+        <!-- Details section -->
+        <div class="form-section">
+          <div class="form-grid">
+            <div class="full">
+              <label class="required" for="title">Short title</label>
+              <input type="text" id="title" name="title" maxlength="200" placeholder="e.g. Bridge washed out near Timure" autocomplete="off" required>
+            </div>
+            <div class="full">
+              <label for="capturedAt">When was it taken?</label>
+              <input type="text" id="capturedAt" name="captured_at" maxlength="120" placeholder="e.g. Aug 26, 2026, early morning" autocomplete="off">
+            </div>
+            <div>
+              <label for="takenBy">Who took it?</label>
+              <input type="text" id="takenBy" name="taken_by" maxlength="200" placeholder="Name or role" autocomplete="off">
+            </div>
+            <div>
+              <label for="owner">Who owns the rights?</label>
+              <input type="text" id="owner" name="owner" maxlength="200" placeholder="If different from the photographer" autocomplete="off">
+            </div>
+            <div class="full">
+              <label for="contact">Contact (optional, shown publicly for verification)</label>
+              <input type="text" id="contact" name="contact" maxlength="300" placeholder="Email or phone" autocomplete="off">
+            </div>
+            <div class="full">
+              <label for="description">What happened? Any additional information</label>
+              <textarea id="description" name="description" maxlength="5000" placeholder="Describe what the photo or video shows, and any details that help others understand or verify it."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <label class="ack">
+          <input type="checkbox" id="ackCheck" name="acknowledged" value="1">
+          <span><strong>I confirm this is authentic:</strong> I took this photo/video or have permission to share it, and I believe the location and details I entered are accurate.</span>
+        </label>
+
+        <input type="text" id="honeypot" name="website" class="honeypot" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+        <div class="step-actions">
+          <button class="btn-ghost" type="button" data-close="uploadModal">Cancel</button>
+          <button class="btn-primary" type="submit" id="submitBtn">Archive and publish</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="detailModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+    <div class="modal-card detail-card">
+      <div class="modal-head">
+        <h2 id="detailTitle">Media details</h2>
+        <button class="modal-x" type="button" data-close="detailModal" aria-label="Close">✕</button>
+      </div>
+      <div id="detailBody"></div>
+    </div>
+  </div>
+
+  <div id="howModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="howTitle">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 id="howTitle">How it works</h2>
+        <button class="modal-x" type="button" data-close="howModal" aria-label="Close">✕</button>
+      </div>
+      <ol class="how-list">
+        <li><strong>Choose one source.</strong> Upload a file from your device, or paste a public Facebook, X, or Twitter post URL.</li>
+        <li><strong>Archive it.</strong> A local file is sent to the project's Google Drive folder. A supported public social URL is downloaded first, then sent to that same folder.</li>
+        <li><strong>Set the location.</strong> Drop a pin on the mini-map at the exact place where the photo or video was taken — or let the system place it approximately along the river if you're not sure.</li>
+        <li><strong>Describe it.</strong> Tell us who took it, when, and what it shows. Tick the confirmation box to state the item is authentic.</li>
+        <li><strong>It appears instantly.</strong> Visitors see the archived media on the map. When available, the original social post remains linked as provenance.</li>
+      </ol>
+      <h3>Important about social posts</h3>
+      <ul class="how-note">
+        <li>Imports work only for public posts that the downloader can access without login. Private, deleted, restricted, or unsupported posts will fail.</li>
+        <li>Do not use this to bypass platform access controls. Only archive media you are allowed to copy and share.</li>
+        <li>Items are <strong>published immediately</strong> and <strong>cannot be deleted</strong>.</li>
+        <li>Anything you enter — including your contact details — is shown publicly to help people verify the evidence.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
