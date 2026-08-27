@@ -26,7 +26,9 @@ RUN npm ci --omit=dev
 COPY . .
 
 # Unprivileged user — safer on Railway.
-RUN mkdir -p data && chown -R node:node /app
+# Note: do NOT create /app/data here — Railway mounts a volume at /app/data
+# AFTER container start. start.sh waits for the mount.
+RUN chown -R node:node /app
 USER node
 
 # Railway injects PORT automatically. Default to 3000 otherwise.
