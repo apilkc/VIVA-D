@@ -7,11 +7,31 @@ const Database = require('better-sqlite3');
 // Override with DB_PATH=:memory: (tests) or a custom file location.
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data', 'media.db');
 
-if (DB_PATH !== ':memory:') {
-  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+function openDatabase(retries = 30, delayMs = 2000) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      if (DB_PATH !== ':memory:') {
+        const dir = path.dirname(DB_PATH);
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
+      }
+      const database = new Database(DB_PATH);
+      return database;
+    } catch (err) {
+      if (err.code === 'SQLITE_CANTOPEN' && attempt < retries) {
+        console.log(`Database not ready (attempt ${attempt}/${retries}), retrying in ${delayMs}ms...`);
+        // Use a synchronous busy-wait since this runs at module load time
+        const start = Date.now();
+        while (Date.now() - start < delayMs) { /* busy wait */ }
+      } else {
+        throw err;
+      }
+    }
+  }
 }
 
-const db = new Database(DB_PATH);
+const db = openDatabase();
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
