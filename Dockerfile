@@ -1,5 +1,5 @@
 # Railway deployment for the Rasuwa Flood Evidence Map.
-# Runs the full Node app (uploads + social downloads + Google Drive archive)
+# Runs the full Node app (uploads + social downloads + Google Cloud Storage archive)
 # with Python 3.10+ and FFmpeg so yt-dlp can download and merge videos.
 
 FROM node:24-bookworm-slim
@@ -36,7 +36,5 @@ ENV PORT=3000
 ENV NODE_OPTIONS=--openssl-legacy-provider
 EXPOSE 3000
 
-COPY start.sh ./start.sh
-RUN chmod +x start.sh
-
-CMD ["./start.sh"]
+# Use sh to run start.sh (avoids chmod +x issue in Docker build)
+CMD ["sh", "start.sh"]
