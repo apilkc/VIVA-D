@@ -28,6 +28,22 @@ function resolveFfmpeg() {
 }
 const FFMPEG_BINARY = resolveFfmpeg();
 
+// Return true if the candidate is executable. Absolute paths must exist on
+// disk; bare names must resolve on PATH. This is what stops the downloader
+// from picking e.g. 'python3.13' (present on macOS) on hosts that only have
+// 'python3' (e.g. the Railway Debian image).
+function pythonExists(candidate) {
+  if (!candidate) return false;
+  if (candidate.includes('/')) return fs.existsSync(candidate);
+  try {
+    const { execSync } = require('child_process');
+    execSync(`command -v ${candidate}`, { stdio: ['ignore', 'pipe', 'ignore'] });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function findPython() {
   const configured = process.env.YTDLP_PYTHON;
   const candidates = [
@@ -41,11 +57,11 @@ function findPython() {
     'python3.11',
     'python3.10',
     'python3',
+    'python',
   ].filter(Boolean);
 
   for (const candidate of candidates) {
-    if (candidate.includes('/') && !fs.existsSync(candidate)) continue;
-    return candidate;
+    if (pythonExists(candidate)) return candidate;
   }
   return null;
 }
