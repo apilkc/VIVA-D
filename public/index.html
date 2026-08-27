@@ -95,7 +95,7 @@
         <div id="importInputBlock" class="hidden">
           <label class="required" for="sourceUrl">Original Facebook, X, or Twitter post</label>
           <input type="url" id="sourceUrl" name="source_url" placeholder="https://facebook.com/... or https://x.com/..." autocomplete="off">
-          <p class="field-hint">The server will download one publicly accessible media item from this post, archive it in Google Drive, and preserve this URL as provenance.</p>
+          <p class="field-hint">The server will download the media from this post, archive it, and keep this link as the source.</p>
           <p id="sourceHint" class="source-hint hidden"></p>
         </div>
 
@@ -185,19 +185,12 @@
         <button class="modal-x" type="button" data-close="howModal" aria-label="Close">✕</button>
       </div>
       <ol class="how-list">
-        <li><strong>Choose one source.</strong> Upload a file from your device (photo, video, or document), or paste a public Facebook, X, or Twitter post URL.</li>
-        <li><strong>Archive it.</strong> A local file is sent to the project's Google Cloud Storage bucket. A supported public social URL is downloaded first, then sent to that same bucket.</li>
-        <li><strong>Set the location.</strong> Drop a pin on the mini-map at the exact place where the photo or video was taken — or let the system place it approximately along the river if you're not sure.</li>
-        <li><strong>Describe it.</strong> Tell us who took it, when, and what it shows. Tick the confirmation box to state the item is authentic.</li>
-        <li><strong>It appears instantly.</strong> Visitors see the archived media on the map. When available, the original social post remains linked as provenance.</li>
+        <li><strong>Add evidence</strong> — upload a photo, video, or document from your device, or paste a public Facebook / X / Twitter post link.</li>
+        <li><strong>Set the location</strong> — drop a pin on the map at the exact spot. Not sure? Check "I don't know exact location" and the system places it along the river.</li>
+        <li><strong>Add details</strong> — who took it, when, and what it shows. Photos with GPS data fill the location automatically.</li>
+        <li><strong>It's published</strong> — the item appears on the map instantly, archived permanently in cloud storage.</li>
       </ol>
-      <h3>Important about social posts</h3>
-      <ul class="how-note">
-        <li>Imports work only for public posts that the downloader can access without login. Private, deleted, restricted, or unsupported posts will fail.</li>
-        <li>Do not use this to bypass platform access controls. Only archive media you are allowed to copy and share.</li>
-        <li>Items are <strong>published immediately</strong> and <strong>cannot be deleted</strong>.</li>
-        <li>Anything you enter — including your contact details — is shown publicly to help people verify the evidence.</li>
-      </ul>
+      <p class="how-note"><strong>Note:</strong> Items are published immediately and cannot be deleted. All information you enter is shown publicly for verification. Social imports only work for public, accessible posts.</p>
     </div>
   </div>
 
