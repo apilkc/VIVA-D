@@ -1,4 +1,8 @@
-# Rasuwa Flood Evidence Map
+# VIVA-D — Virtual Imagery and Video Archive for Disasters
+
+VIVA-D is an open collection of geotagged photographs and videos documenting the impacts of natural disasters, with an initial focus on floods and landslides. It provides organized visual data and associated metadata to support disaster reconnaissance, research, assessment, and resilience efforts.
+
+## Rasuwa Flood Evidence Map
 
 A public web platform for documenting the **August 26, 2026 flash flood** on the
 Bhote Koshi river in Nepal's Rasuwa district (Timure, Syaphrubesi and the areas

@@ -2,7 +2,7 @@
   "name": "rasuwa-flood-evidence-map",
   "version": "1.0.0",
   "private": true,
-  "description": "Public evidence map for the Rasuwa (Bhote Koshi) flood — archive uploaded photos/videos in Google Drive with social-media provenance and map metadata.",
+  "description": "VIVA-D: an open geotagged visual archive for natural-disaster reconnaissance, research, assessment, and resilience.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
