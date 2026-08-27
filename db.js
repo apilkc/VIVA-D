@@ -40,7 +40,7 @@ db.exec(`
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
     drive_url      TEXT    NOT NULL DEFAULT '',
     drive_file_id  TEXT    NOT NULL DEFAULT '',
-    storage_type   TEXT    NOT NULL DEFAULT 'drive' CHECK (storage_type IN ('drive','legacy_link','pending')),
+    storage_type   TEXT    NOT NULL DEFAULT 'drive' CHECK (storage_type IN ('drive','gcs','legacy_link','pending')),
     source_url     TEXT    NOT NULL DEFAULT '',
     source_platform TEXT   NOT NULL DEFAULT '',
     source_post_id TEXT    NOT NULL DEFAULT '',
