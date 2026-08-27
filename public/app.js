@@ -216,6 +216,29 @@ function metadataSheetHtml() {
   return '<div class="metadata-sheet"><p class="sheet-intro">Compiled from the evidence currently loaded on the map. Location labels show whether coordinates came from GPS, an approximate river placement, or a user-selected pin.</p><div class="sheet-table-wrap"><table><thead><tr><th>Date</th><th>Title</th><th>File name</th><th>Location</th><th>Taken by</th><th>Location source</th><th>Remarks</th><th>File</th></tr></thead><tbody>' + (rows || '<tr><td colspan="8">No evidence loaded.</td></tr>') + '</tbody></table></div></div>';
 }
 
+function metadataCsv() {
+  const headers = ['Date', 'Title', 'File name', 'Location', 'Latitude', 'Longitude', 'Taken by', 'Location source', 'Remarks', 'File link'];
+  const quote = (value) => '"' + String(value == null ? '' : value).replace(/"/g, '""') + '"';
+  const lines = [headers.map(quote).join(',')];
+  itemsById.forEach((item) => lines.push([
+    item.captured_at || '', item.title || '', item.original_filename || '', item.location_name || '',
+    item.lat, item.lng, item.taken_by || '', locationConfidence(item), item.description || '', item.previewUrl || item.drive_url || '',
+  ].map(quote).join(',')));
+  return '\ufeff' + lines.join('\r\n');
+}
+
+function downloadMetadataSheet() {
+  const blob = new Blob([metadataCsv()], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'rasuwa-flood-metadata.csv';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 function openMetadataSheet() {
   $('#metadataBody').innerHTML = metadataSheetHtml();
   openModal('metadataModal');
@@ -777,6 +800,7 @@ $('#emptyDocsBtn').addEventListener('click', () => {
 });
 $('#howBtn').addEventListener('click', () => openModal('howModal'));
 $('#metadataSheetBtn').addEventListener('click', openMetadataSheet);
+$('#downloadMetadataBtn').addEventListener('click', downloadMetadataSheet);
 $('#streetMapBtn').addEventListener('click', () => setMapStyle('street'));
 $('#satelliteMapBtn').addEventListener('click', () => setMapStyle('satellite'));
 map.on('zoomend', () => {
