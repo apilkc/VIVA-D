@@ -508,4 +508,128 @@ app.use((err, req, res, next) => {
 /* static frontend */
 app.use(express.static(path.join(__dirname, 'public')));
 
+/* ---------- GCS file browser ---------- */
+
+const BROWSE_FOLDERS = [
+  { key: 'image', label: '📷 Images', desc: 'Photos uploaded by the community' },
+  { key: 'video', label: '🎥 Videos', desc: 'Videos uploaded or imported from social media' },
+  { key: 'download', label: '⬇️ Downloads', desc: 'Files downloaded from Facebook, X/Twitter' },
+  { key: 'document', label: '📄 Documents', desc: 'Reports, PDFs, and other documents' },
+];
+
+async function listGcsFiles(prefix) {
+  try {
+    const { getGcsConfig } = require('./drive-storage');
+    const gcsConfig = getGcsConfig();
+    if (!gcsConfig) return [];
+    const { Storage } = require('@google-cloud/storage');
+    const credentials = gcsConfig.serviceAccount.keyFile
+      ? undefined
+      : { client_email: gcsConfig.serviceAccount.clientEmail, private_key: gcsConfig.serviceAccount.privateKey };
+    const storage = new Storage(gcsConfig.serviceAccount.keyFile ? { keyFilename: gcsConfig.serviceAccount.keyFile } : { credentials });
+    const [files] = await storage.bucket(gcsConfig.bucket).getFiles({ prefix });
+    return files
+      .filter((f) => f.name !== prefix && !f.name.endsWith('/'))
+      .map((f) => ({
+        name: f.name.split('/').pop(),
+        fullPath: f.name,
+        size: Number(f.metadata.size) || 0,
+        modified: f.metadata.updated,
+        url: `https://storage.googleapis.com/${gcsConfig.bucket}/${encodeURIComponent(f.name)}`,
+      }));
+  } catch (err) {
+    console.error('GCS list error:', err.message);
+    return [];
+  }
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function escHtml(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
+app.get('/browse', async (req, res) => {
+  try {
+  const folder = req.query.folder || '';
+  if (folder && BROWSE_FOLDERS.some((f) => f.key === folder)) {
+    const files = await listGcsFiles(folder + '/');
+    const folderInfo = BROWSE_FOLDERS.find((f) => f.key === folder);
+    const totalSize = files.reduce((sum, f) => sum + f.size, 0);
+    const fileRows = files.map((f) =>
+      '<tr><td><a href="' + escHtml(f.url) + '" target="_blank" rel="noopener">' + escHtml(f.name) + '</a></td>' +
+      '<td>' + formatSize(f.size) + '</td>' +
+      '<td>' + (f.modified ? new Date(f.modified).toLocaleDateString() : '') + '</td></tr>'
+    ).join('');
+    res.send(BROWSE_HTML.replace('{{FOLDER_TITLE}}', escHtml(folderInfo.label) + ' — ' + escHtml(folderInfo.desc))
+      .replace('{{BREADCRUMB}}', '<a href="/browse">All Folders</a> / ' + escHtml(folderInfo.label))
+      .replace('{{FILE_COUNT}}', files.length + ' file' + (files.length !== 1 ? 's' : ''))
+      .replace('{{TOTAL_SIZE}}', formatSize(totalSize))
+      .replace('{{FILE_ROWS}}', fileRows || '<tr><td colspan="3" style="text-align:center;color:#888;">No files in this folder yet.</td></tr>'));
+  }
+  // Folder overview
+  const folderCards = await Promise.all(BROWSE_FOLDERS.map(async (f) => {
+    const files = await listGcsFiles(f.key + '/');
+    const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+    return '<a href="/browse?folder=' + f.key + '" class="browse-card">' +
+      '<div class="browse-card-title">' + escHtml(f.label) + '</div>' +
+      '<div class="browse-card-desc">' + escHtml(f.desc) + '</div>' +
+      '<div class="browse-card-stats">' + files.length + ' file' + (files.length !== 1 ? 's' : '') + ' · ' + formatSize(totalSize) + '</div>' +
+      '</a>';
+  }));    res.send(BROWSE_HTML.replace('{{FOLDER_TITLE}}', 'Rasuwa Flood Evidence Archive')
+    .replace('{{BREADCRUMB}}', 'All Folders')
+    .replace('{{FILE_COUNT}}', '')
+    .replace('{{TOTAL_SIZE}}', '')
+    .replace(/<table[\s\S]*<\/table>/, '<div class="browse-grid">' + folderCards.join('') + '</div>'));
+  } catch (err) {
+    console.error('Browse error:', err);
+    res.status(500).send('<h1>Error loading files</h1><p>' + escHtml(err.message) + '</p><a href="/browse">Try again</a>');
+  }
+});
+
+const BROWSE_HTML = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rasuwa Flood Archive — Browse Files</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📂</text></svg>">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f4f6f9;color:#1c2733;min-height:100vh}
+.browse-header{background:#fff;border-bottom:1px solid #dde3ea;padding:16px 24px;display:flex;align-items:center;gap:16px}
+.browse-header h1{font-size:1.3rem}
+.browse-header a{color:#1667d9;text-decoration:none;font-weight:600}
+.browse-header a:hover{text-decoration:underline}
+.browse-breadcrumb{padding:12px 24px;color:#5c6b7a;font-size:0.9rem}
+.browse-breadcrumb a{color:#1667d9;text-decoration:none}
+.browse-meta{padding:0 24px 12px;color:#5c6b7a;font-size:0.85rem}
+.browse-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;padding:16px 24px}
+.browse-card{display:block;background:#fff;border:1px solid #dde3ea;border-radius:12px;padding:20px;text-decoration:none;color:inherit;transition:box-shadow 0.15s}
+.browse-card:hover{box-shadow:0 4px 16px rgba(20,40,70,0.12)}
+.browse-card-title{font-size:1.2rem;font-weight:700;margin-bottom:6px}
+.browse-card-desc{color:#5c6b7a;font-size:0.9rem;margin-bottom:8px}
+.browse-card-stats{color:#1667d9;font-size:0.85rem;font-weight:600}
+.browse-table{width:100%;border-collapse:collapse;margin:0 24px;max-width:calc(100% - 48px)}
+.browse-table th{text-align:left;padding:10px 12px;border-bottom:2px solid #dde3ea;font-size:0.85rem;color:#5c6b7a;font-weight:600}
+.browse-table td{padding:10px 12px;border-bottom:1px solid #eee;font-size:0.9rem}
+.browse-table td a{color:#1667d9;text-decoration:none;font-weight:500}
+.browse-table td a:hover{text-decoration:underline}
+.browse-table tr:hover{background:#f8f9fa}
+.back-link{display:inline-block;margin:16px 24px;color:#1667d9;text-decoration:none;font-weight:600;font-size:0.9rem}
+.back-link:hover{text-decoration:underline}
+</style></head><body>
+<div class="browse-header">
+  <a href="/" style="font-size:1.5rem">🗺️</a>
+  <h1>📂 Rasuwa Flood Evidence Archive</h1>
+  <a href="/">← Back to map</a>
+</div>
+<div class="browse-breadcrumb">{{BREADCRUMB}}</div>
+<div class="browse-meta">{{FILE_COUNT}} {{TOTAL_SIZE}}</div>
+<table class="browse-table"><thead><tr><th>File</th><th>Size</th><th>Modified</th></tr></thead><tbody>{{FILE_ROWS}}</tbody></table>
+</body></html>`;
+
 module.exports = app;
