@@ -53,7 +53,7 @@ function serialize(item) {
 
 /* ---------- validation ---------- */
 
-const BOUNDS = { latMin: 4, latMax: 37, lngMin: 60, lngMax: 100 }; // South Asia / wider region
+const BOUNDS = { latMin: 26, latMax: 31, lngMin: 79.5, lngMax: 89 }; // Nepal
 const MAX_LEN = {
   drive_url: 2048,
   source_url: 2048,
