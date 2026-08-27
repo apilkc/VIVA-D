@@ -54,6 +54,7 @@ function serialize(item) {
     taken_by: item.taken_by,
     owner: item.owner,
     contact: item.contact,
+    location_source: item.location_source || '',
     submitted_at: item.submitted_at,
     thumbnailUrl: isGcs ? driveUrl : (driveFileId ? thumbnailUrl(driveFileId) : null),
     previewUrl,
@@ -91,6 +92,7 @@ function clean(body) {
     taken_by: s('taken_by'),
     owner: s('owner'),
     contact: s('contact'),
+    location_source: s('location_source'),
     acknowledged: b.acknowledged,
     website: s('website'),
   };

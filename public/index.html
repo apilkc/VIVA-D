@@ -27,10 +27,6 @@
   <main class="map-wrap">
     <div id="map" role="application" aria-label="Map of flood evidence"></div>
 
-    <div class="map-style-control" role="group" aria-label="Map type">
-      <button id="streetMapBtn" class="map-style-btn active" type="button" aria-pressed="true">Street</button>
-      <button id="satelliteMapBtn" class="map-style-btn" type="button" aria-pressed="false">Satellite</button>
-    </div>
 
     <div id="emptyState" class="empty-state hidden">
       <div class="empty-card">
@@ -44,10 +40,17 @@
 
     <div id="statusBar" class="status-bar hidden" role="status"></div>
 
-    <div class="filter-bar" role="group" aria-label="Filter by type">
-      <button class="filter-btn active" data-type="photo" type="button"><span class="dot photo"></span>📷 Photo</button>
-      <button class="filter-btn active" data-type="video" type="button"><span class="dot video"></span>🎥 Video</button>
-      <button class="filter-btn active" data-type="document" type="button"><span class="dot document"></span>📄 Document</button>
+    <div class="map-tools">
+      <button class="metadata-sheet-link" id="metadataSheetBtn" type="button" title="View compiled metadata sheet">▦ Metadata sheet</button>
+      <div class="map-style-control" role="group" aria-label="Map type">
+        <button id="streetMapBtn" class="map-style-btn active" type="button" aria-pressed="true">Street</button>
+        <button id="satelliteMapBtn" class="map-style-btn" type="button" aria-pressed="false">Satellite</button>
+      </div>
+      <div class="filter-bar" role="group" aria-label="Filter by type">
+        <button class="filter-btn active" data-type="photo" type="button"><span class="dot photo"></span><span class="filter-label">Photo</span></button>
+        <button class="filter-btn active" data-type="video" type="button"><span class="dot video"></span><span class="filter-label">Video</span></button>
+        <button class="filter-btn active" data-type="document" type="button"><span class="dot document"></span><span class="filter-label">Document</span></button>
+      </div>
     </div>
 
     <footer class="map-footer">
@@ -82,7 +85,7 @@
         <div id="uploadInputBlock">
           <label class="required" for="mediaFile">Photo or video file</label>
           <input type="file" id="mediaFile" name="media" accept="image/*,video/*">
-          <p class="field-hint">The file will be archived into the project's Google Cloud Storage bucket. Maximum size: 250 MB. Photos with GPS data will auto-fill the location.</p>
+          <p class="field-hint">Archived securely in cloud storage. Photos with GPS data auto-fill the location.</p>
           <p id="archiveStatus" class="archive-status">Checking cloud archive connection…</p>
 
           <div id="localPreview" class="local-preview hidden">
@@ -175,6 +178,13 @@
         <button class="modal-x" type="button" data-close="detailModal" aria-label="Close">✕</button>
       </div>
       <div id="detailBody"></div>
+    </div>
+  </div>
+
+  <div id="metadataModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="metadataTitle">
+    <div class="modal-card metadata-card">
+      <div class="modal-head"><h2 id="metadataTitle">Compiled metadata sheet</h2><button class="modal-x" type="button" data-close="metadataModal" aria-label="Close">✕</button></div>
+      <div id="metadataBody"></div>
     </div>
   </div>
 

@@ -202,6 +202,38 @@ function mediaThumb(item, popup = true) {
   return '<img class="' + className + '" src="' + esc(item.thumbnailUrl) + '" alt="" loading="lazy" onerror="this.outerHTML = thumbFallback()">';
 }
 
+function metadataSheetHtml() {
+  const rows = Array.from(itemsById.values()).map((item) => '<tr>' +
+    '<td>' + esc(item.captured_at || '—') + '</td>' +
+    '<td>' + esc(item.title || '—') + '</td>' +
+    '<td>' + esc(item.original_filename || '—') + '</td>' +
+    '<td>' + esc(item.location_name || '—') + '<br><small>' + Number(item.lat).toFixed(5) + ', ' + Number(item.lng).toFixed(5) + '</small></td>' +
+    '<td>' + esc(item.taken_by || '—') + '</td>' +
+    '<td>' + locationLabel(item) + '</td>' +
+    '<td>' + esc(item.description || '—') + '</td>' +
+    '<td><a href="' + esc(item.previewUrl || item.drive_url || '') + '" target="_blank" rel="noopener">Download / open</a></td>' +
+    '</tr>').join('');
+  return '<div class="metadata-sheet"><p class="sheet-intro">Compiled from the evidence currently loaded on the map. Location labels show whether coordinates came from GPS, an approximate river placement, or a user-selected pin.</p><div class="sheet-table-wrap"><table><thead><tr><th>Date</th><th>Title</th><th>File name</th><th>Location</th><th>Taken by</th><th>Location source</th><th>Remarks</th><th>File</th></tr></thead><tbody>' + (rows || '<tr><td colspan="8">No evidence loaded.</td></tr>') + '</tbody></table></div></div>';
+}
+
+function openMetadataSheet() {
+  $('#metadataBody').innerHTML = metadataSheetHtml();
+  openModal('metadataModal');
+}
+
+function locationConfidence(item) {
+  if (item.location_source) return item.location_source;
+  if (item.location_name && /approximate|river/i.test(item.location_name)) return 'Approximate';
+  if (item.media_type === 'photo' && item.location_name && /gps|geotag/i.test(item.description || '')) return 'GPS';
+  return 'User-set';
+}
+
+function locationLabel(item) {
+  const confidence = locationConfidence(item);
+  const cls = confidence === 'GPS' ? 'gps' : confidence === 'Approximate' ? 'approximate' : 'user-set';
+  return '<span class="location-confidence ' + cls + '" title="How this location was placed">' + (confidence === 'GPS' ? '📍 GPS' : confidence === 'Approximate' ? '≈ Approximate' : '✦ User-set') + '</span>';
+}
+
 function sourceLabel(item) {
   if (!item.source_url) return '';
   const platform = item.source_platform === 'x' ? 'X/Twitter' : item.source_platform === 'facebook' ? 'Facebook' : 'social post';
@@ -210,7 +242,7 @@ function sourceLabel(item) {
 
 function popupHtml(item) {
   const metaBits = [];
-  if (item.location_name) metaBits.push(esc(item.location_name));
+  if (item.location_name) metaBits.push(esc(item.location_name) + ' ' + locationLabel(item));
   if (item.captured_at) metaBits.push(esc(item.captured_at));
   const meta = metaBits.length ? '<p class="popup-meta">' + metaBits.join(' · ') + '</p>' : '';
   const desc = item.description ? '<p class="popup-desc">' + esc(shorten(item.description, 180)) + '</p>' : '';
@@ -325,7 +357,7 @@ function detailHtml(item) {
     ['Type', typeLabel],
     ['Stored in', 'Project Google Cloud Storage archive'],
     ['File', esc(item.original_filename || 'Archived media')],
-    ['Location', esc(item.location_name || 'Not provided') + ' <span class="coords">(' + item.lat.toFixed(5) + ', ' + item.lng.toFixed(5) + ')</span>'],
+    ['Location', esc(item.location_name || 'Not provided') + ' ' + locationLabel(item) + ' <span class="coords">(' + item.lat.toFixed(5) + ', ' + item.lng.toFixed(5) + ')</span>'],
     ['When taken', esc(item.captured_at || 'Not provided')],
     ['Taken by', esc(item.taken_by || 'Not provided')],
     ['Owner / rights', esc(item.owner || 'Not provided')],
@@ -367,11 +399,13 @@ const pin = L.marker(DEFAULT_CENTER, { draggable: true }).addTo(miniMap);
 let selectedLat = null;
 let selectedLng = null;
 let locationConfirmed = false;
+let locationSource = '';
 
 function setLocation(latlng) {
   selectedLat = latlng[0];
   selectedLng = latlng[1];
   locationConfirmed = true;
+  if (!locationSource) locationSource = 'User-set';
   $('#locStatus').textContent = '✓ Location set: ' + latlng[0].toFixed(5) + ', ' + latlng[1].toFixed(5);
   reverseGeocode(latlng[0], latlng[1]).then((name) => { if (name) $('#locationName').value = name; });
 }
@@ -430,6 +464,7 @@ function resetUpload() {
   selectedLat = null;
   selectedLng = null;
   locationConfirmed = false;
+  locationSource = '';
   pin.setLatLng(DEFAULT_CENTER);
   miniMap.setView(DEFAULT_CENTER, MINI_ZOOM);
   updateIngestMode();
@@ -499,6 +534,7 @@ function updateLocalPreview() {
         if (gps.lat >= 26 && gps.lat <= 31 && gps.lng >= 79.5 && gps.lng <= 89) {
           pin.setLatLng([gps.lat, gps.lng]);
           miniMap.setView([gps.lat, gps.lng], 15);
+          locationSource = 'GPS';
           setLocation([gps.lat, gps.lng]);
           toast('📍 GPS location detected from photo!');
         }
@@ -515,6 +551,7 @@ function handleUnknownLocation() {
     const riverPoint = getRandomRiverPoint();
     pin.setLatLng(riverPoint);
     miniMap.setView(riverPoint, 12);
+    locationSource = 'Approximate';
     setLocation(riverPoint);
     $('#locationName').value = 'Approximate location along Bhote Koshi river';
     toast('📍 Placed approximately along the river. You can adjust the pin if needed.');
@@ -678,6 +715,7 @@ async function submitItem(e) {
   formData.append('location_name', $('#locationName').value.trim());
   formData.append('lat', selectedLat);
   formData.append('lng', selectedLng);
+  formData.append('location_source', locationSource || 'User-set');
   formData.append('captured_at', $('#capturedAt').value.trim());
   formData.append('taken_by', $('#takenBy').value.trim());
   formData.append('owner', $('#owner').value.trim());
@@ -738,6 +776,7 @@ $('#emptyDocsBtn').addEventListener('click', () => {
   }, 100);
 });
 $('#howBtn').addEventListener('click', () => openModal('howModal'));
+$('#metadataSheetBtn').addEventListener('click', openMetadataSheet);
 $('#streetMapBtn').addEventListener('click', () => setMapStyle('street'));
 $('#satelliteMapBtn').addEventListener('click', () => setMapStyle('satellite'));
 map.on('zoomend', () => {
@@ -764,6 +803,6 @@ $('#useMyLocation').addEventListener('click', () => {
     toast('Location set.');
   }, () => toast('Could not get your location. Drop the pin on the map instead.'), { enableHighAccuracy: true, timeout: 10000 });
 });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') ['uploadModal', 'detailModal', 'howModal'].forEach(closeModal); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') ['uploadModal', 'detailModal', 'howModal', 'metadataModal'].forEach(closeModal); });
 
 loadItems().then(startLiveRefresh);

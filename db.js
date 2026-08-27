@@ -74,6 +74,7 @@ const migrations = [
   ['mime_type', "ALTER TABLE media ADD COLUMN mime_type TEXT NOT NULL DEFAULT ''"],
   ['file_size', "ALTER TABLE media ADD COLUMN file_size INTEGER NOT NULL DEFAULT 0"],
   ['downvotes', "ALTER TABLE media ADD COLUMN downvotes INTEGER NOT NULL DEFAULT 0"],
+  ['location_source', "ALTER TABLE media ADD COLUMN location_source TEXT NOT NULL DEFAULT 'User-set'"],
 ];
 for (const [name, sql] of migrations) {
   if (!columns.includes(name)) db.exec(sql);
@@ -87,11 +88,11 @@ const insertStmt = db.prepare(`
   INSERT INTO media (
     drive_url, drive_file_id, storage_type, source_url, source_platform, source_post_id,
     original_filename, mime_type, file_size, media_type, title, description, location_name,
-    lat, lng, captured_at, taken_by, owner, contact, acknowledged, submitted_at, status
+    lat, lng, captured_at, taken_by, owner, contact, location_source, acknowledged, submitted_at, status
   ) VALUES (
     @drive_url, @drive_file_id, @storage_type, @source_url, @source_platform, @source_post_id,
     @original_filename, @mime_type, @file_size, @media_type, @title, @description, @location_name,
-    @lat, @lng, @captured_at, @taken_by, @owner, @contact, @acknowledged, @submitted_at, @status
+    @lat, @lng, @captured_at, @taken_by, @owner, @contact, @location_source, @acknowledged, @submitted_at, @status
   )
 `);
 const updateStmt = db.prepare(`
