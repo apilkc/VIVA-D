@@ -19,7 +19,8 @@
     <nav class="topnav" aria-label="Main">
       <span id="countChip" class="count-chip" title="Items currently on the map">0 items</span>
       <button id="howBtn" class="btn-ghost" type="button">How it works</button>
-      <button id="addBtn" class="btn-primary" type="button">＋ Add media</button>
+      <button id="addMediaBtn" class="btn-primary" type="button">＋ Add media</button>
+      <button id="addDocsBtn" class="btn-secondary" type="button">📄 Add documents</button>
     </nav>
   </header>
 
@@ -37,6 +38,7 @@
         <h2>No media yet</h2>
         <p>Nothing has been added to the map so far. If you have photos or videos from the flood area, add them — every item helps document what happened.</p>
         <button id="emptyAddBtn" class="btn-primary" type="button">＋ Add the first item</button>
+        <button id="emptyDocsBtn" class="btn-secondary" type="button">📄 Add documents</button>
       </div>
     </div>
 
@@ -45,15 +47,19 @@
     <div class="legend" aria-hidden="true">
       <span class="legend-item"><span class="dot photo"></span>Photo</span>
       <span class="legend-item"><span class="dot video"></span>Video</span>
+      <span class="legend-item"><span class="dot document"></span>Document</span>
     </div>
 
     <footer class="map-footer">
       <div class="footer-inner">
         <div class="footer-text">
-          <strong>Rasuwa Flood Evidence Map</strong> — a community archive documenting photos and videos from the Bhote Koshi flash flood of 26 August 2026. Every item is stored in Google Drive for permanent, verifiable record-keeping.
+          <strong>Rasuwa Flood Evidence Map</strong> — a community archive documenting photos, videos, and documents from the Bhote Koshi flash flood of 26 August 2026. Every item is stored in Google Cloud Storage for permanent, verifiable record-keeping.
         </div>
         <div class="footer-links">
-          <a href="https://drive.google.com/drive/folders/1VtWiMw_A3j-4lB9VEf15kAwpMuB7ac6_" target="_blank" rel="noopener noreferrer" class="footer-link">📂 Browse all data in Google Drive</a>
+          <a href="https://storage.googleapis.com/rasuwa-flood-media-viva/?prefix=image/" target="_blank" rel="noopener noreferrer" class="footer-link">📷 Browse Images</a>
+          <a href="https://storage.googleapis.com/rasuwa-flood-media-viva/?prefix=video/" target="_blank" rel="noopener noreferrer" class="footer-link">🎥 Browse Videos</a>
+          <a href="https://storage.googleapis.com/rasuwa-flood-media-viva/?prefix=download/" target="_blank" rel="noopener noreferrer" class="footer-link">⬇️ Browse Downloads</a>
+          <a href="https://storage.googleapis.com/rasuwa-flood-media-viva/?prefix=document/" target="blank" rel="noopener noreferrer" class="footer-link">📄 Browse Documents</a>
         </div>
       </div>
     </footer>
@@ -79,7 +85,7 @@
         <div id="uploadInputBlock">
           <label class="required" for="mediaFile">Photo or video file</label>
           <input type="file" id="mediaFile" name="media" accept="image/*,video/*">
-          <p class="field-hint">The file will be archived into the project's Google Drive folder. Maximum size: 250 MB. Photos with GPS data will auto-fill the location.</p>
+          <p class="field-hint">The file will be archived into the project's Google Cloud Storage bucket. Maximum size: 250 MB. Photos with GPS data will auto-fill the location.</p>
           <p id="archiveStatus" class="archive-status">Checking Google Drive archive connection…</p>
 
           <div id="localPreview" class="local-preview hidden">
@@ -100,6 +106,7 @@
           <legend class="required">What is it?</legend>
           <label class="radio-card"><input type="radio" name="media_type" value="photo" checked>📷 Photo</label>
           <label class="radio-card"><input type="radio" name="media_type" value="video">🎥 Video</label>
+          <label class="radio-card"><input type="radio" name="media_type" value="document">📄 Document</label>
         </fieldset>
 
         <!-- Location section -->
@@ -181,8 +188,8 @@
         <button class="modal-x" type="button" data-close="howModal" aria-label="Close">✕</button>
       </div>
       <ol class="how-list">
-        <li><strong>Choose one source.</strong> Upload a file from your device, or paste a public Facebook, X, or Twitter post URL.</li>
-        <li><strong>Archive it.</strong> A local file is sent to the project's Google Drive folder. A supported public social URL is downloaded first, then sent to that same folder.</li>
+        <li><strong>Choose one source.</strong> Upload a file from your device (photo, video, or document), or paste a public Facebook, X, or Twitter post URL.</li>
+        <li><strong>Archive it.</strong> A local file is sent to the project's Google Cloud Storage bucket. A supported public social URL is downloaded first, then sent to that same bucket.</li>
         <li><strong>Set the location.</strong> Drop a pin on the mini-map at the exact place where the photo or video was taken — or let the system place it approximately along the river if you're not sure.</li>
         <li><strong>Describe it.</strong> Tell us who took it, when, and what it shows. Tick the confirmation box to state the item is authentic.</li>
         <li><strong>It appears instantly.</strong> Visitors see the archived media on the map. When available, the original social post remains linked as provenance.</li>

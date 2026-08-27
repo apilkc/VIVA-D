@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { google } = require('googleapis');
 
-const FOLDER_KEYS = ['image', 'video', 'download'];
+const FOLDER_KEYS = ['image', 'video', 'download', 'document'];
 
 function getServiceAccountCredentials() {
   const keyFile = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_FILE || '';

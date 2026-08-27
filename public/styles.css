@@ -85,6 +85,20 @@ body {
 }
 .btn-ghost:hover { background: #f0f3f7; }
 
+.btn-secondary {
+  background: #f8f9fa;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn-secondary:hover { background: #e9ecef; }
+
 .btn-sm { padding: 7px 12px; font-size: 0.85rem; border-radius: 7px; }
 
 /* ---------- layout ---------- */
@@ -167,6 +181,7 @@ body {
 .dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; }
 .dot.photo { background: var(--primary); }
 .dot.video { background: var(--video); }
+.dot.document { background: #10b981; }
 
 /* ---------- markers ---------- */
 
@@ -184,6 +199,7 @@ body {
 }
 .pin span { transform: rotate(45deg); line-height: 1; }
 .pin.video { background: var(--video); }
+.pin.document { background: #10b981; }
 .pin.pending { background: #f59e0b; animation: pulse 1.5s ease-in-out infinite; }
 @keyframes pulse {
   0%, 100% { opacity: 1; transform: rotate(-45deg) scale(1); }

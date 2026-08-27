@@ -102,12 +102,19 @@ function validate(v, { directUpload = false, socialImport = false, file = null }
     }
   }
 
-  if (directUpload && file && (v.media_type === 'photo' || v.media_type === 'video')) {
-    const expectedPrefix = v.media_type === 'photo' ? 'image/' : 'video/';
-    if (!file.mimetype.startsWith(expectedPrefix)) {
-      errors.push(v.media_type === 'photo'
-        ? 'Choose an image file for Photo.'
-        : 'Choose a video file for Video.');
+  if (directUpload && file) {
+    if (v.media_type === 'photo') {
+      if (!file.mimetype.startsWith('image/')) {
+        errors.push('Choose an image file for Photo.');
+      }
+    } else if (v.media_type === 'video') {
+      if (!file.mimetype.startsWith('video/')) {
+        errors.push('Choose a video file for Video.');
+      }
+    } else if (v.media_type === 'document') {
+      if (!file.mimetype.startsWith('application/') && !file.mimetype.endsWith('/pdf')) {
+        errors.push('Choose a document file (PDF, DOCX, etc.) for Document.');
+      }
     }
   }
 
@@ -119,8 +126,8 @@ function validate(v, { directUpload = false, socialImport = false, file = null }
     }
   }
 
-  if (v.media_type !== 'photo' && v.media_type !== 'video' && !(socialImport && !v.media_type)) {
-    errors.push('Choose whether this is a photo or a video.');
+  if (v.media_type !== 'photo' && v.media_type !== 'video' && v.media_type !== 'document' && !(socialImport && !v.media_type)) {
+    errors.push('Choose whether this is a photo, video, or document.');
   }
 
   if (!v.title) errors.push('Please give this item a short title.');
@@ -384,11 +391,16 @@ async function createItemHandler(req, res) {
     }
 
     try {
+      let folderKey = 'media';
+      if (v.media_type === 'photo') folderKey = 'image';
+      else if (v.media_type === 'video') folderKey = 'video';
+      else if (v.media_type === 'document') folderKey = 'document';
+      
       const result = await uploadToDrive({
         filepath: req.file.path,
         filename: req.file.originalname,
         mimeType: req.file.mimetype,
-        folderKey: v.media_type === 'photo' ? 'image' : 'video',
+        folderKey,
       });
       stored = {
         storage_type: 'drive',
@@ -443,8 +455,8 @@ const upload = multer({
   }),
   limits: { fileSize: 250 * 1024 * 1024 },
   fileFilter: (req, file, callback) => {
-    if (/^(image|video)\//.test(file.mimetype)) return callback(null, true);
-    const error = new Error('Only image and video files can be uploaded.');
+    if (/^(image|video|application)\//.test(file.mimetype)) return callback(null, true);
+    const error = new Error('Only image, video, or document files can be uploaded.');
     error.code = 'UNSUPPORTED_MEDIA_TYPE';
     callback(error);
   },

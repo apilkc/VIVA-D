@@ -163,7 +163,9 @@ function pinSizeForZoom(zoom) {
 }
 
 function pinIcon(type, zoom = map.getZoom()) {
-  const emoji = type === 'video' ? '🎥' : '📷';
+  let emoji = '📷';
+  if (type === 'video') emoji = '🎥';
+  else if (type === 'document') emoji = '📄';
   const size = pinSizeForZoom(zoom);
   const emojiSize = Math.max(10, Math.round(size * 0.47));
   return L.divIcon({
@@ -176,7 +178,7 @@ function pinIcon(type, zoom = map.getZoom()) {
 }
 
 window.thumbFallback = function thumbFallback() {
-  return '<div class="popup-thumb video">📷 Preview unavailable — open the archived file in Google Drive</div>';
+  return '<div class="popup-thumb video">📷 Preview unavailable — open the archived file in Google Cloud Storage</div>';
 };
 
 function mediaThumb(item, popup = true) {
@@ -238,7 +240,7 @@ function updateCount() {
 }
 
 window.detailImgFallback = function detailImgFallback() {
-  return '<div class="detail-video">📷 Archived preview unavailable — open the file in Google Drive</div>';
+  return '<div class="detail-video">📷 Archived preview unavailable — open the file in Google Cloud Storage</div>';
 };
 
 window.downvoteItem = async function downvoteItem(id) {
@@ -268,9 +270,12 @@ window.downvoteItem = async function downvoteItem(id) {
 };
 
 function detailHtml(item) {
+  let typeLabel = '📷 Photo';
+  if (item.media_type === 'video') typeLabel = '🎥 Video';
+  else if (item.media_type === 'document') typeLabel = '📄 Document';
   const rows = [
-    ['Type', item.media_type === 'photo' ? '📷 Photo' : '🎥 Video'],
-    ['Stored in', 'Project Google Drive archive'],
+    ['Type', typeLabel],
+    ['Stored in', 'Project Google Cloud Storage archive'],
     ['File', esc(item.original_filename || 'Archived media')],
     ['Location', esc(item.location_name || 'Not provided') + ' <span class="coords">(' + item.lat.toFixed(5) + ', ' + item.lng.toFixed(5) + ')</span>'],
     ['When taken', esc(item.captured_at || 'Not provided')],
@@ -386,9 +391,10 @@ async function updateArchiveStatus() {
   try {
     const res = await fetch('/api/config');
     const data = await res.json();
-    status.textContent = data.directUploadsEnabled ? 'Google Drive archive connected. Your selected file will be stored there.' : 'Google Drive archive is not connected yet. The site owner must finish the one-time setup before uploads can be archived.';
+    const storageType = data.storageType === 'gcs' ? 'Google Cloud Storage' : 'Google Drive';
+    status.textContent = data.directUploadsEnabled ? storageType + ' archive connected. Your selected file will be stored there.' : storageType + ' archive is not connected yet. The site owner must finish the one-time setup before uploads can be archived.';
     status.classList.add(data.directUploadsEnabled ? 'ready' : 'missing');
-  } catch { status.textContent = 'Could not check the Google Drive archive connection.'; }
+  } catch { status.textContent = 'Could not check the archive connection.'; }
 }
 
 function openUpload() {
@@ -510,7 +516,7 @@ function updateSourceHint() {
   const hint = $('#sourceHint');
   const parsed = parseSocial(source);
   if (!source) { hint.classList.add('hidden'); clearTimeout(metadataTimer); return; }
-  hint.textContent = parsed ? 'Detected ' + (parsed.platform === 'x' ? 'X/Twitter' : 'Facebook') + '. The server will download one public media item and archive it in Google Drive.' : 'Use a public Facebook, X, or Twitter post URL.';
+  hint.textContent = parsed ? 'Detected ' + (parsed.platform === 'x' ? 'X/Twitter' : 'Facebook') + '. The server will download one public media item and archive it in Google Cloud Storage.' : 'Use a public Facebook, X, or Twitter post URL.';
   hint.classList.remove('hidden');
   clearTimeout(metadataTimer);
   if (parsed) {
@@ -667,7 +673,22 @@ async function submitItem(e) {
 }
 
 $('#addBtn').addEventListener('click', openUpload);
+$('#addMediaBtn').addEventListener('click', openUpload);
+$('#addDocsBtn').addEventListener('click', () => {
+  openUpload();
+  setTimeout(() => {
+    const docRadio = document.querySelector('input[name="media_type"][value="document"]');
+    if (docRadio) docRadio.checked = true;
+  }, 100);
+});
 $('#emptyAddBtn').addEventListener('click', openUpload);
+$('#emptyDocsBtn').addEventListener('click', () => {
+  openUpload();
+  setTimeout(() => {
+    const docRadio = document.querySelector('input[name="media_type"][value="document"]');
+    if (docRadio) docRadio.checked = true;
+  }, 100);
+});
 $('#howBtn').addEventListener('click', () => openModal('howModal'));
 $('#streetMapBtn').addEventListener('click', () => setMapStyle('street'));
 $('#satelliteMapBtn').addEventListener('click', () => setMapStyle('satellite'));
