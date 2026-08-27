@@ -208,7 +208,21 @@ app.get('/api/config', (req, res) => {
   }
 });
 
-/* ---------- EXIF GPS extraction ---------- */
+/* ---------- EXIF photo metadata extraction ---------- */
+
+function formatExifCaptureDate(value) {
+  if (!value) return '';
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}${month}${day}`;
+  }
+  const match = String(value).trim().match(/^(\d{4})[-:](\d{2})[-:](\d{2})/);
+  return match ? match[1] + match[2] + match[3] : '';
+}
+
+app.locals.formatExifCaptureDate = formatExifCaptureDate;
 
 const exifUpload = multer({
   storage: multer.diskStorage({
@@ -226,27 +240,30 @@ const exifUpload = multer({
 
 app.post('/api/extract-gps', exifUpload.single('image'), async (req, res) => {
   if (!req.file) {
-    return res.json({ gps: null });
+    return res.json({ gps: null, capturedAt: '' });
   }
   try {
     const exifr = require('exifr');
-    // exifr returns latitude/longitude in decimal degrees and understands
-    // JPEG, PNG, WebP, TIFF and HEIC/HEIF (modern phone photos, esp. iPhone).
-    const exif = await exifr.parse(req.file.path, { gps: true });
+    // Read coordinates and the original camera timestamp from common phone
+    // photo formats, including JPEG, PNG, WebP, TIFF and HEIC/HEIF.
+    const exif = await exifr.parse(req.file.path, { gps: true, exif: true });
     removeTemporaryFile(req.file);
-
+    const capturedAt = formatExifCaptureDate(
+      exif && (exif.DateTimeOriginal || exif.CreateDate)
+    );
+    let gps = null;
     if (exif && exif.latitude != null && exif.longitude != null) {
       const lat = Number(exif.latitude);
       const lng = Number(exif.longitude);
       if (lat >= 26 && lat <= 31 && lng >= 79.5 && lng <= 89) {
-        return res.json({ gps: { lat, lng } });
+        gps = { lat, lng };
       }
     }
-    res.json({ gps: null });
+    res.json({ gps, capturedAt });
   } catch (error) {
     console.error('EXIF extraction error:', error.message);
     removeTemporaryFile(req.file);
-    res.json({ gps: null });
+    res.json({ gps: null, capturedAt: '' });
   }
 });
 
