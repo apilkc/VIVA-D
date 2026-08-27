@@ -13,27 +13,51 @@
 
   <header class="topbar">
     <div class="brand">
-      <div class="brand-title">Rasuwa Flood Evidence Map</div>
-      <div class="brand-sub">Bhote Koshi &middot; Timure &amp; Syaphrubesi &middot; 26 August 2026</div>
+      <div class="brand-title" data-i18n="brandTitle">Rasuwa Flood Evidence Map</div>
+      <div class="brand-sub"><span data-i18n="brandSub">Bhote Koshi Flood · 26 August 2026</span> <span class="archive-status-chip" data-i18n="archiveStatus">Public evidence archive</span></div>
     </div>
+    <form class="header-search" id="archiveSearchForm" role="search"><label class="sr-only" for="archiveSearch" data-i18n="searchArchive">Search the archive</label><input id="archiveSearch" type="search" placeholder="Search places, titles, contributors, or evidence…" data-i18n-placeholder="searchPlaceholder" autocomplete="off"><button id="archiveSearchBtn" type="submit" aria-label="Search archive">⌕</button></form>
     <nav class="topnav" aria-label="Main">
-      <span id="countChip" class="count-chip" title="Items currently on the map">0 items</span>
-      <button id="howBtn" class="btn-ghost" type="button">How it works</button>
-      <button id="addMediaBtn" class="btn-primary" type="button">＋ Add media</button>
-      <button id="addDocsBtn" class="btn-secondary" type="button">📄 Add documents</button>
+      <span id="countChip" class="count-chip" title="Evidence currently on the map">0 evidence</span>
+      <div class="language-switch" role="group" aria-label="Language"><button class="language-btn active" type="button" data-language="en" aria-pressed="true">EN</button><button class="language-btn" type="button" data-language="ne" aria-pressed="false">ने</button></div>
+      <button id="howBtn" class="btn-ghost" type="button" data-i18n="howItWorks">How it works</button>
+      <button id="addMediaBtn" class="btn-primary" type="button"><span aria-hidden="true">＋</span> <span data-i18n="addEvidence">Add evidence</span></button>
+      <button id="addDocsBtn" class="btn-secondary utility-docs" type="button">📄 Documents</button>
     </nav>
   </header>
 
   <main class="map-wrap">
     <div id="map" role="application" aria-label="Map of flood evidence"></div>
+    <aside class="evidence-panel" aria-label="Evidence archive filters">
+      <button id="drawerHandle" class="drawer-handle" type="button" aria-label="Resize evidence drawer" aria-expanded="true"><span></span></button>
+      <div class="panel-head"><div><p class="panel-kicker" data-i18n="filters">Filters</p><h2 data-i18n="evidenceType">Evidence type</h2><p id="panelCount">0 evidence documented</p></div><button id="panelToggle" class="panel-toggle" type="button" aria-label="Collapse filters" aria-expanded="true">−</button></div>
+      <div class="panel-filters panel-type-filters" role="group" aria-label="Filter evidence">
+        <button class="panel-filter active" data-panel-type="all" type="button"><span data-i18n="all">All</span></button>
+        <button class="panel-filter" data-panel-type="photo" type="button"><svg class="filter-icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="1.5"/><circle cx="5.5" cy="6.5" r="1"/><path d="m3.5 11 3-3 2.2 2 1.5-1.4 2.3 2.4"/></svg><span data-i18n="photo">Photo</span></button>
+        <button class="panel-filter" data-panel-type="video" type="button"><svg class="filter-icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="m6.8 5.5 4 2.5-4 2.5z"/></svg><span data-i18n="video">Video</span></button>
+        <button class="panel-filter" data-panel-type="document" type="button"><svg class="filter-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h5l3 3v9H4z"/><path d="M9 2v3h3M6 8h4M6 10.5h4"/></svg><span data-i18n="document">Document</span></button>
+        <button class="panel-filter" data-panel-type="social" type="button"><svg class="filter-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 9.5 9.5 6.5M5.2 11.8l-1 .9a2.4 2.4 0 0 1-3.4-3.4l2.4-2.4a2.4 2.4 0 0 1 3.4 0M10.8 4.2l1-.9a2.4 2.4 0 1 1 3.4 3.4l-2.4 2.4a2.4 2.4 0 0 1-3.4 0"/></svg><span data-i18n="social">Social</span></button>
+      </div>
+      <div class="panel-field"><label for="sortEvidence" data-i18n="sortBy">Sort by</label><select id="sortEvidence"><option value="captured" data-i18n="dateCaptured">Date captured</option><option value="archived" data-i18n="dateArchived">Date archived</option></select></div>
+      <div class="timeline-control"><div class="timeline-heading"><label for="timelineRange" data-i18n="timeline">Evidence timeline</label><button id="timelineReset" type="button" data-i18n="allDates">All dates</button></div><input id="timelineRange" type="range" min="0" max="0" value="0" step="1" disabled><div class="timeline-labels"><span id="timelineStart">—</span><strong id="timelineCurrent" data-i18n="allDates">All dates</strong></div></div>
+      <div class="panel-about"><h3 data-i18n="aboutArchive">About this archive</h3><p><span data-i18n="aboutBeforeCreator">A community archive documenting flood impacts, damage, infrastructure disruption, and recovery along the Bhote Koshi corridor in Rasuwa. Created by</span> <a class="creator-link" href="https://apilkc.github.io/" target="_blank" rel="noopener noreferrer">Apil KC</a> <span data-i18n="aboutAfterCreator">to support transparent public-interest documentation, research, and verification.</span></p><a href="#" id="aboutArchiveLink" data-i18n="learnMore">Learn more →</a></div>
+      <div class="panel-stats"><div><strong id="panelStatItems">0</strong><span data-i18n="evidence">Evidence</span></div><div><strong id="panelStatLocations">0</strong><span data-i18n="locations">Locations</span></div><div><strong id="panelStatContributors">0</strong><span data-i18n="contributors">Contributors</span></div></div>
+      <button class="panel-download" id="panelMetadataBtn" type="button">▤ <span data-i18n="openMetadata">Open metadata</span></button>
+      <div class="panel-search"><label class="sr-only" for="panelSearch">Search evidence</label><input id="panelSearch" type="search" placeholder="Search this archive…"></div>
+      <div id="evidenceList" class="evidence-list"></div>
+    </aside>
+    <aside id="detailPanel" class="detail-panel hidden" aria-label="Selected evidence">
+      <div class="detail-panel-head"><span>Evidence detail</span><button id="detailCloseBtn" class="panel-toggle" type="button" aria-label="Close evidence detail">×</button></div>
+      <div id="detailPanelBody"></div>
+    </aside>
 
 
     <div id="emptyState" class="empty-state hidden">
       <div class="empty-card">
         <div class="empty-icon">🗺️</div>
-        <h2>No media yet</h2>
+        <h2>No evidence is visible here</h2>
         <p>Nothing has been added to the map so far. If you have photos or videos from the flood area, add them — every item helps document what happened.</p>
-        <button id="emptyAddBtn" class="btn-primary" type="button">＋ Add the first item</button>
+        <button id="emptyAddBtn" class="btn-primary" type="button">＋ Add the first evidence</button>
         <button id="emptyDocsBtn" class="btn-secondary" type="button">📄 Add documents</button>
       </div>
     </div>
@@ -41,26 +65,18 @@
     <div id="statusBar" class="status-bar hidden" role="status"></div>
 
     <div class="map-tools">
-      <button class="metadata-sheet-link" id="metadataSheetBtn" type="button" title="View compiled metadata sheet">▦ Metadata sheet</button>
       <div class="map-style-control" role="group" aria-label="Map type">
-        <button id="streetMapBtn" class="map-style-btn active" type="button" aria-pressed="true">Street</button>
-        <button id="satelliteMapBtn" class="map-style-btn" type="button" aria-pressed="false">Satellite</button>
-      </div>
-      <div class="filter-bar" role="group" aria-label="Filter by type">
-        <button class="filter-btn active" data-type="photo" type="button"><span class="dot photo"></span><span class="filter-label">Photo</span></button>
-        <button class="filter-btn active" data-type="video" type="button"><span class="dot video"></span><span class="filter-label">Video</span></button>
-        <button class="filter-btn active" data-type="document" type="button"><span class="dot document"></span><span class="filter-label">Document</span></button>
+        <button id="streetMapBtn" class="map-style-btn active" type="button" aria-pressed="true" data-i18n="street">Street</button>
+        <button id="satelliteMapBtn" class="map-style-btn" type="button" aria-pressed="false" data-i18n="satellite">Satellite</button>
       </div>
     </div>
 
+    <section class="latest-strip" aria-label="Latest evidence"><div class="latest-head"><strong data-i18n="latestEvidence">Latest evidence</strong></div><div id="latestEvidence" class="latest-list"></div></section>
+
     <footer class="map-footer">
       <div class="footer-inner">
-        <div class="footer-text">
-          <strong>Rasuwa Flood Evidence Map</strong> — a community archive documenting photos, videos, and documents from the Bhote Koshi flash flood of 26 August 2026. Every item is stored in Google Cloud Storage for permanent, verifiable record-keeping.
-        </div>
-        <div class="footer-links">
-          <a href="/browse" class="footer-link">📂 Browse all files</a>
-        </div>
+        <div class="footer-text"><strong data-i18n="brandTitle">Rasuwa Flood Evidence Map</strong> · <span data-i18n="footerArchive">Public evidence archive · Permanently archived in Google Cloud Storage</span></div>
+        <div class="footer-links"><a href="/browse" class="footer-link">🗂 <span data-i18n="browseArchive">Browse the archive</span></a></div>
       </div>
     </footer>
   </main>
@@ -68,7 +84,7 @@
   <div id="uploadModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="uploadTitle">
     <div class="modal-card modal-card-tall">
       <div class="modal-head">
-        <h2 id="uploadTitle">Add media</h2>
+        <h2 id="uploadTitle" data-i18n="addEvidence">Add evidence</h2>
         <button class="modal-x" type="button" data-close="uploadModal" aria-label="Close">✕</button>
       </div>
 
@@ -77,15 +93,15 @@
       <form id="uploadForm" novalidate>
         <!-- Source section -->
         <fieldset class="mode-row">
-          <legend class="required">How are you adding this media?</legend>
-          <label class="radio-card"><input type="radio" name="ingest_mode" id="modeUpload" value="upload" checked>📁 Upload from this device</label>
-          <label class="radio-card"><input type="radio" name="ingest_mode" id="modeImport" value="import">🔗 Import from Facebook, X, or Twitter</label>
+          <legend class="required" data-i18n="addingMedia">How are you adding this media?</legend>
+          <label class="radio-card"><input type="radio" name="ingest_mode" id="modeUpload" value="upload" checked>📁 <span data-i18n="uploadDevice">Upload from this device</span></label>
+          <label class="radio-card"><input type="radio" name="ingest_mode" id="modeImport" value="import">🔗 <span data-i18n="importSocial">Import from Facebook, X, or Twitter</span></label>
         </fieldset>
 
         <div id="uploadInputBlock">
-          <label class="required" for="mediaFile">Photo or video file</label>
+          <label class="required" for="mediaFile" data-i18n="mediaFile">Photo or video file</label>
           <input type="file" id="mediaFile" name="media" accept="image/*,video/*">
-          <p class="field-hint">Archived securely in cloud storage. Photos with GPS data auto-fill the location.</p>
+          <p class="field-hint" data-i18n="archiveHint">Archived securely in cloud storage. Photos with GPS data auto-fill the location.</p>
           <p id="archiveStatus" class="archive-status">Checking cloud archive connection…</p>
 
           <div id="localPreview" class="local-preview hidden">
@@ -96,33 +112,37 @@
         </div>
 
         <div id="importInputBlock" class="hidden">
-          <label class="required" for="sourceUrl">Original Facebook, X, or Twitter post</label>
+          <label class="required" for="sourceUrl" data-i18n="originalPost">Original Facebook, X, or Twitter post</label>
           <input type="url" id="sourceUrl" name="source_url" placeholder="https://facebook.com/... or https://x.com/..." autocomplete="off">
-          <p class="field-hint">The server will download the media from this post, archive it, and keep this link as the source.</p>
+          <p class="field-hint" data-i18n="importHint">The server will download the media from this post, archive it, and keep this link as the source.</p>
           <p id="sourceHint" class="source-hint hidden"></p>
         </div>
 
         <fieldset id="mediaTypeBlock" class="radio-row">
-          <legend class="required">What is it?</legend>
-          <label class="radio-card"><input type="radio" name="media_type" value="photo" checked>📷 Photo</label>
-          <label class="radio-card"><input type="radio" name="media_type" value="video">🎥 Video</label>
-          <label class="radio-card"><input type="radio" name="media_type" value="document">📄 Document</label>
+          <legend class="required" data-i18n="whatIsIt">What is it?</legend>
+          <label class="radio-card"><input type="radio" name="media_type" value="photo" checked>📷 <span data-i18n="photo">Photo</span></label>
+          <label class="radio-card"><input type="radio" name="media_type" value="video">🎥 <span data-i18n="video">Video</span></label>
+          <label class="radio-card"><input type="radio" name="media_type" value="document">📄 <span data-i18n="document">Document</span></label>
         </fieldset>
 
         <!-- Location section -->
         <div class="form-section">
-          <span class="form-label required">Where was it taken?</span>
+          <span class="form-label required" data-i18n="whereTaken">Where was it taken?</span>
           <label class="ack unknown-location">
             <input type="checkbox" id="unknownLocation">
-            <span>I don't know the exact location — place it approximately along the river</span>
+            <span data-i18n="unknownLocation">I don't know the exact location — place it approximately along the river</span>
           </label>
+          <div id="photoGpsStatus" class="location-source-status hidden" role="status">
+            <span class="source-check" aria-hidden="true">✓</span>
+            <span><strong>Location updated from photo</strong><small>Embedded GPS coordinates were detected and applied automatically.</small></span>
+          </div>
           <div id="miniMapWrap">
             <div id="miniMap" class="mini-map"></div>
           </div>
-          <p class="field-hint" id="locStatus">Click the map to drop the pin at the exact spot.</p>
+          <p class="field-hint" id="locStatus" data-i18n="mapLocationHint">Click the map to drop the pin at the exact spot.</p>
           <div class="inline-row">
-            <input type="text" id="locationName" name="location_name" placeholder="Place name (auto-filled, editable)" autocomplete="off">
-            <button class="btn-ghost" type="button" id="useMyLocation">📍 Use my location</button>
+            <input type="text" id="locationName" name="location_name" placeholder="Place name (auto-filled, editable)" data-i18n-placeholder="placePlaceholder" autocomplete="off">
+            <button class="btn-ghost" type="button" id="useMyLocation">📍 <span data-i18n="useLocation">Use my location</span></button>
           </div>
         </div>
 
@@ -130,42 +150,42 @@
         <div class="form-section">
           <div class="form-grid">
             <div class="full">
-              <label class="required" for="title">Short title</label>
-              <input type="text" id="title" name="title" maxlength="200" placeholder="e.g. Bridge washed out near Timure" autocomplete="off" required>
+              <label class="required" for="title" data-i18n="shortTitle">Short title</label>
+              <input type="text" id="title" name="title" maxlength="200" placeholder="e.g. Bridge washed out near Timure" data-i18n-placeholder="titlePlaceholder" autocomplete="off" required>
             </div>
             <div class="full">
-              <label for="capturedAt">When was it taken?</label>
-              <input type="text" id="capturedAt" name="captured_at" maxlength="120" placeholder="e.g. Aug 26, 2026, early morning" autocomplete="off">
+              <label for="capturedAt" data-i18n="whenTaken">When was it taken?</label>
+              <input type="text" id="capturedAt" name="captured_at" maxlength="120" placeholder="e.g. Aug 26, 2026, early morning" data-i18n-placeholder="capturedPlaceholder" autocomplete="off">
             </div>
             <div>
-              <label for="takenBy">Who took it?</label>
-              <input type="text" id="takenBy" name="taken_by" maxlength="200" placeholder="Name or role" autocomplete="off">
+              <label for="takenBy" data-i18n="whoTook">Who took it?</label>
+              <input type="text" id="takenBy" name="taken_by" maxlength="200" placeholder="Name or role" data-i18n-placeholder="namePlaceholder" autocomplete="off">
             </div>
             <div>
-              <label for="owner">Who owns the rights?</label>
-              <input type="text" id="owner" name="owner" maxlength="200" placeholder="If different from the photographer" autocomplete="off">
+              <label for="owner" data-i18n="whoOwns">Who owns the rights?</label>
+              <input type="text" id="owner" name="owner" maxlength="200" placeholder="If different from the photographer" data-i18n-placeholder="ownerPlaceholder" autocomplete="off">
             </div>
             <div class="full">
-              <label for="contact">Contact (optional, shown publicly for verification)</label>
-              <input type="text" id="contact" name="contact" maxlength="300" placeholder="Email or phone" autocomplete="off">
+              <label for="contact" data-i18n="contactLabel">Contact (optional, shown publicly for verification)</label>
+              <input type="text" id="contact" name="contact" maxlength="300" placeholder="Email or phone" data-i18n-placeholder="contactPlaceholder" autocomplete="off">
             </div>
             <div class="full">
-              <label for="description">What happened? Any additional information</label>
-              <textarea id="description" name="description" maxlength="5000" placeholder="Describe what the photo or video shows, and any details that help others understand or verify it."></textarea>
+              <label for="description" data-i18n="descriptionLabel">What happened? Any additional information</label>
+              <textarea id="description" name="description" maxlength="5000" placeholder="Describe what the photo or video shows, and any details that help others understand or verify it." data-i18n-placeholder="descriptionPlaceholder"></textarea>
             </div>
           </div>
         </div>
 
         <label class="ack">
           <input type="checkbox" id="ackCheck" name="acknowledged" value="1">
-          <span><strong>I confirm this is authentic:</strong> I took this photo/video or have permission to share it, and I believe the location and details I entered are accurate.</span>
+          <span><strong data-i18n="confirmAuthentic">I confirm this is authentic:</strong> <span data-i18n="confirmText">I took this photo/video or have permission to share it, and I believe the location and details I entered are accurate.</span></span>
         </label>
 
         <input type="text" id="honeypot" name="website" class="honeypot" tabindex="-1" autocomplete="off" aria-hidden="true">
 
         <div class="step-actions">
-          <button class="btn-ghost" type="button" data-close="uploadModal">Cancel</button>
-          <button class="btn-primary" type="submit" id="submitBtn">Archive and publish</button>
+          <button class="btn-ghost" type="button" data-close="uploadModal" data-i18n="cancel">Cancel</button>
+          <button class="btn-primary" type="submit" id="submitBtn" data-i18n="publish">Archive and publish</button>
         </div>
       </form>
     </div>
@@ -201,6 +221,8 @@
         <li><strong>It's published</strong> — the item appears on the map instantly, archived permanently in cloud storage.</li>
       </ol>
       <p class="how-note"><strong>Note:</strong> Items are published immediately and cannot be deleted. All information you enter is shown publicly for verification. Social imports only work for public, accessible posts.</p>
+      <h3>About this archive</h3>
+      <p class="how-note">This public-interest archive was created by <a class="creator-link" href="https://apilkc.github.io/" target="_blank" rel="noopener noreferrer">Apil KC</a> to make flood evidence easier to preserve, locate, research, and verify. It brings community-contributed records together in one transparent map of the Bhote Koshi corridor.</p>
     </div>
   </div>
 
