@@ -36,4 +36,7 @@ ENV PORT=3000
 ENV NODE_OPTIONS=--openssl-legacy-provider
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+COPY start.sh ./start.sh
+RUN chmod +x start.sh
+
+CMD ["./start.sh"]
