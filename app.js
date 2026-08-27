@@ -181,62 +181,24 @@ const exifUpload = multer({
   },
 });
 
-app.post('/api/extract-gps', exifUpload.single('image'), (req, res) => {
+app.post('/api/extract-gps', exifUpload.single('image'), async (req, res) => {
   if (!req.file) {
     return res.json({ gps: null });
   }
   try {
-    const buffer = fs.readFileSync(req.file.path);
-    const exifReader = require('exif-reader');
-    let exifData = null;
-
-    // Check for JPEG SOI marker (0xFFD8)
-    if (buffer[0] === 0xFF && buffer[1] === 0xD8) {
-      let offset = 2;
-      while (offset < buffer.length - 4) {
-        if (buffer[offset] === 0xFF && buffer[offset + 1] === 0xE1) {
-          const length = buffer.readUInt16BE(offset + 2);
-          const segment = buffer.slice(offset + 4, offset + length);
-          // exif-reader expects the TIFF header directly ('MM' or 'II')
-          // APP1 payload: 6 bytes 'Exif\0\0' + TIFF data
-          const tiffStart = segment.indexOf(Buffer.from('Exif\0\0'));
-          if (tiffStart !== -1) {
-            const tiffData = segment.slice(tiffStart + 6);
-            try {
-              exifData = exifReader(tiffData);
-            } catch (e) { /* skip */ }
-          }
-          break;
-        }
-        // Skip non-APP1 segments
-        if (buffer[offset] === 0xFF && buffer[offset + 1] !== 0xDA && buffer[offset + 1] !== 0xD9) {
-          offset += 2 + buffer.readUInt16BE(offset + 2);
-        } else {
-          offset++;
-        }
-      }
-    }
-
+    const exifr = require('exifr');
+    // exifr returns latitude/longitude in decimal degrees and understands
+    // JPEG, PNG, WebP, TIFF and HEIC/HEIF (modern phone photos, esp. iPhone).
+    const exif = await exifr.parse(req.file.path, { gps: true });
     removeTemporaryFile(req.file);
 
-    if (exifData && exifData.GPSInfo) {
-      const gps = exifData.GPSInfo;
-      if (gps.GPSLatitude && gps.GPSLongitude) {
-        const latParts = gps.GPSLatitude;
-        const lngParts = gps.GPSLongitude;
-        if (Array.isArray(latParts) && latParts.length === 3 &&
-            Array.isArray(lngParts) && lngParts.length === 3) {
-          let lat = latParts[0] + latParts[1] / 60 + latParts[2] / 3600;
-          let lng = lngParts[0] + lngParts[1] / 60 + lngParts[2] / 3600;
-          if (gps.GPSLatitudeRef === 'S') lat = -lat;
-          if (gps.GPSLongitudeRef === 'W') lng = -lng;
-          if (lat >= 26 && lat <= 31 && lng >= 79.5 && lng <= 89) {
-            return res.json({ gps: { lat, lng } });
-          }
-        }
+    if (exif && exif.latitude != null && exif.longitude != null) {
+      const lat = Number(exif.latitude);
+      const lng = Number(exif.longitude);
+      if (lat >= 26 && lat <= 31 && lng >= 79.5 && lng <= 89) {
+        return res.json({ gps: { lat, lng } });
       }
     }
-
     res.json({ gps: null });
   } catch (error) {
     console.error('EXIF extraction error:', error.message);
