@@ -38,6 +38,8 @@ function serialize(item) {
     downvotes: item.downvotes || 0,
     storage_type: item.storage_type || (item.drive_url ? 'legacy_link' : 'drive'),
     source_url: item.source_url || '',
+    document_source_url: item.document_source_url || '',
+    publisher_type: item.publisher_type || '',
     source_platform: item.source_platform || '',
     source_post_id: item.source_post_id || '',
     original_filename: item.original_filename || '',
@@ -67,6 +69,8 @@ const BOUNDS = { latMin: 26, latMax: 31, lngMin: 79.5, lngMax: 89 }; // Nepal
 const MAX_LEN = {
   drive_url: 2048,
   source_url: 2048,
+  document_source_url: 2048,
+  publisher_type: 40,
   title: 200,
   description: 5000,
   location_name: 200,
@@ -91,6 +95,8 @@ function clean(body) {
   return {
     drive_url: s('drive_url'),
     source_url: s('source_url'),
+    document_source_url: s('document_source_url'),
+    publisher_type: s('publisher_type'),
     media_type: b.media_type,
     title: s('title'),
     description: s('description'),
@@ -132,8 +138,8 @@ function validate(v, { directUpload = false, socialImport = false, file = null }
         errors.push('Choose a video file for Video.');
       }
     } else if (v.media_type === 'document') {
-      if (!file.mimetype.startsWith('application/') && !file.mimetype.endsWith('/pdf')) {
-        errors.push('Choose a document file (PDF, DOCX, etc.) for Document.');
+      if (file.mimetype !== 'application/pdf' && !file.mimetype.startsWith('image/')) {
+        errors.push('Choose a PDF or image file for Document.');
       }
     }
   }
@@ -146,6 +152,19 @@ function validate(v, { directUpload = false, socialImport = false, file = null }
     }
   }
 
+  if (v.document_source_url) {
+    if (v.document_source_url.length > MAX_LEN.document_source_url) {
+      errors.push('The document source link is too long.');
+    } else {
+      try {
+        const url = new URL(v.document_source_url);
+        if (!['http:', 'https:'].includes(url.protocol)) errors.push('Document source link must use http or https.');
+      } catch {
+        errors.push('Document source link must be a valid URL.');
+      }
+    }
+  }
+
   if (v.media_type !== 'photo' && v.media_type !== 'video' && v.media_type !== 'document' && !(socialImport && !v.media_type)) {
     errors.push('Choose whether this is a photo, video, or document.');
   }
@@ -153,20 +172,25 @@ function validate(v, { directUpload = false, socialImport = false, file = null }
   if (!v.title) errors.push('Please give this item a short title.');
   else if (v.title.length > MAX_LEN.title) errors.push('The title is too long (200 characters maximum).');
 
-  if (v.description.length > MAX_LEN.description) errors.push('The description is too long (5000 characters maximum).');
+  const isDocument = v.media_type === 'document';
+  if (isDocument && !['government', 'ngo_ingo', 'private'].includes(v.publisher_type)) {
+    errors.push('Choose the document publisher type.');
+  }
+  if (v.publisher_type.length > MAX_LEN.publisher_type) errors.push('The publisher type is too long.');
+  if (v.description.length > MAX_LEN.description) errors.push('The brief note is too long (5000 characters maximum).');
   if (v.location_name.length > MAX_LEN.location_name) errors.push('The place name is too long.');
   if (v.captured_at.length > MAX_LEN.captured_at) errors.push('The date field is too long.');
   if (v.taken_by.length > MAX_LEN.taken_by) errors.push('The "taken by" field is too long.');
   if (v.owner.length > MAX_LEN.owner) errors.push('The owner field is too long.');
   if (v.contact.length > MAX_LEN.contact) errors.push('The contact field is too long.');
-  if (!['Photo GPS', 'GPS', 'Approximate', 'User-set'].includes(v.location_source)) {
+  if (!isDocument && !['Photo GPS', 'GPS', 'Approximate', 'User-set'].includes(v.location_source)) {
     errors.push('Choose a valid location source.');
   }
 
-  if (!Number.isFinite(v.lat) || v.lat < BOUNDS.latMin || v.lat > BOUNDS.latMax) {
+  if (!isDocument && (!Number.isFinite(v.lat) || v.lat < BOUNDS.latMin || v.lat > BOUNDS.latMax)) {
     errors.push('Please set a valid location on the map (latitude).');
   }
-  if (!Number.isFinite(v.lng) || v.lng < BOUNDS.lngMin || v.lng > BOUNDS.lngMax) {
+  if (!isDocument && (!Number.isFinite(v.lng) || v.lng < BOUNDS.lngMin || v.lng > BOUNDS.lngMax)) {
     errors.push('Please set a valid location on the map (longitude).');
   }
 
@@ -356,6 +380,12 @@ async function createItemHandler(req, res) {
   }
 
   const v = clean(body);
+  if (v.media_type === 'document') {
+    v.lat = 0;
+    v.lng = 0;
+    v.location_name = '';
+    v.location_source = '';
+  }
   if (directUpload && !v.title) v.title = titleFromFilename(req.file.originalname);
   // A JSON request with a Drive link is retained for legacy records; the
   // public form uses source_url alone to request a social-media import.
@@ -390,6 +420,8 @@ async function createItemHandler(req, res) {
       drive_file_id: '',
       storage_type: 'pending',
       source_url: source ? source.url : '',
+      document_source_url: v.document_source_url,
+      publisher_type: v.publisher_type,
       source_platform: source ? source.platform : '',
       source_post_id: source ? source.postId : '',
       original_filename: '',
@@ -469,6 +501,8 @@ async function createItemHandler(req, res) {
   const item = db.createItem({
     ...stored,
     source_url: source ? source.url : '',
+    document_source_url: v.document_source_url,
+    publisher_type: v.publisher_type,
     source_platform: source ? source.platform : '',
     source_post_id: source ? source.postId : '',
     media_type: v.media_type,

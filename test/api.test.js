@@ -91,6 +91,37 @@ test('new item appears in the public list', async () => {
   assert.equal(items[0].location_name, 'Timure, Rasuwa');
 });
 
+test('creates a document without map data and retains its document metadata', async () => {
+  const { status, data } = await post(validBody({
+    media_type: 'document',
+    location_name: '',
+    lat: '',
+    lng: '',
+    location_source: '',
+    captured_at: '',
+    taken_by: '',
+    owner: '',
+    contact: '',
+    title: 'Flood impact assessment',
+    description: 'Initial assessment prepared for public review.',
+    document_source_url: 'https://example.org/flood-assessment.pdf',
+    publisher_type: 'government',
+  }));
+  assert.equal(status, 201);
+  assert.equal(data.item.media_type, 'document');
+  assert.equal(data.item.location_name, '');
+  assert.equal(data.item.publisher_type, 'government');
+  assert.equal(data.item.document_source_url, 'https://example.org/flood-assessment.pdf');
+});
+
+test('requires a publisher type for documents', async () => {
+  const { status, data } = await post(validBody({
+    media_type: 'document', location_name: '', lat: '', lng: '', location_source: '', publisher_type: '',
+  }));
+  assert.equal(status, 400);
+  assert.ok(data.errors.some((e) => /publisher type/i.test(e)));
+});
+
 test('rejects a missing acknowledgment checkbox', async () => {
   const { status, data } = await post(validBody({ acknowledged: 0 }));
   assert.equal(status, 400);

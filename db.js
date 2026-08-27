@@ -42,6 +42,8 @@ db.exec(`
     drive_file_id  TEXT    NOT NULL DEFAULT '',
     storage_type   TEXT    NOT NULL DEFAULT 'drive' CHECK (storage_type IN ('drive','gcs','legacy_link','pending')),
     source_url     TEXT    NOT NULL DEFAULT '',
+    document_source_url TEXT NOT NULL DEFAULT '',
+    publisher_type TEXT    NOT NULL DEFAULT '',
     source_platform TEXT   NOT NULL DEFAULT '',
     source_post_id TEXT    NOT NULL DEFAULT '',
     original_filename TEXT  NOT NULL DEFAULT '',
@@ -68,6 +70,8 @@ const columns = db.prepare('PRAGMA table_info(media)').all().map((column) => col
 const migrations = [
   ['storage_type', "ALTER TABLE media ADD COLUMN storage_type TEXT NOT NULL DEFAULT 'legacy_link'"],
   ['source_url', "ALTER TABLE media ADD COLUMN source_url TEXT NOT NULL DEFAULT ''"],
+  ['document_source_url', "ALTER TABLE media ADD COLUMN document_source_url TEXT NOT NULL DEFAULT ''"],
+  ['publisher_type', "ALTER TABLE media ADD COLUMN publisher_type TEXT NOT NULL DEFAULT ''"],
   ['source_platform', "ALTER TABLE media ADD COLUMN source_platform TEXT NOT NULL DEFAULT ''"],
   ['source_post_id', "ALTER TABLE media ADD COLUMN source_post_id TEXT NOT NULL DEFAULT ''"],
   ['original_filename', "ALTER TABLE media ADD COLUMN original_filename TEXT NOT NULL DEFAULT ''"],
@@ -86,11 +90,11 @@ const listAllStmt = db.prepare('SELECT * FROM media ORDER BY id DESC');
 const getStmt = db.prepare('SELECT * FROM media WHERE id = ?');
 const insertStmt = db.prepare(`
   INSERT INTO media (
-    drive_url, drive_file_id, storage_type, source_url, source_platform, source_post_id,
+    drive_url, drive_file_id, storage_type, source_url, document_source_url, publisher_type, source_platform, source_post_id,
     original_filename, mime_type, file_size, media_type, title, description, location_name,
     lat, lng, captured_at, taken_by, owner, contact, location_source, acknowledged, submitted_at, status
   ) VALUES (
-    @drive_url, @drive_file_id, @storage_type, @source_url, @source_platform, @source_post_id,
+    @drive_url, @drive_file_id, @storage_type, @source_url, @document_source_url, @publisher_type, @source_platform, @source_post_id,
     @original_filename, @mime_type, @file_size, @media_type, @title, @description, @location_name,
     @lat, @lng, @captured_at, @taken_by, @owner, @contact, @location_source, @acknowledged, @submitted_at, @status
   )

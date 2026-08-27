@@ -92,15 +92,15 @@
 
       <form id="uploadForm" novalidate>
         <!-- Source section -->
-        <fieldset class="mode-row">
+        <fieldset id="ingestModeBlock" class="mode-row">
           <legend class="required" data-i18n="addingMedia">How are you adding this media?</legend>
           <label class="radio-card"><input type="radio" name="ingest_mode" id="modeUpload" value="upload" checked>📁 <span data-i18n="uploadDevice">Upload from this device</span></label>
           <label class="radio-card"><input type="radio" name="ingest_mode" id="modeImport" value="import">🔗 <span data-i18n="importSocial">Import from Facebook, X, or Twitter</span></label>
         </fieldset>
 
         <div id="uploadInputBlock">
-          <label class="required" for="mediaFile" data-i18n="mediaFile">Photo or video file</label>
-          <input type="file" id="mediaFile" name="media" accept="image/*,video/*">
+          <label class="required" for="mediaFile" id="mediaFileLabel" data-i18n="mediaFile">Photo or video file</label>
+          <input type="file" id="mediaFile" name="media" accept="image/*,video/*,application/pdf">
           <p class="field-hint" data-i18n="archiveHint">Archived securely in cloud storage. Photos with GPS data auto-fill the location.</p>
           <p id="archiveStatus" class="archive-status">Checking cloud archive connection…</p>
 
@@ -126,7 +126,7 @@
         </fieldset>
 
         <!-- Location section -->
-        <div class="form-section">
+        <div id="locationSection" class="form-section">
           <span class="form-label required" data-i18n="whereTaken">Where was it taken?</span>
           <label class="ack unknown-location">
             <input type="checkbox" id="unknownLocation">
@@ -153,6 +153,27 @@
               <label class="required" for="title" data-i18n="shortTitle">Short title</label>
               <input type="text" id="title" name="title" maxlength="200" placeholder="e.g. Bridge washed out near Timure" data-i18n-placeholder="titlePlaceholder" autocomplete="off" required>
             </div>
+            <div id="documentDetailsBlock" class="full hidden document-details">
+              <div class="document-fields">
+                <div>
+                  <label class="required" for="publisherType">Publisher type</label>
+                  <select id="publisherType" name="publisher_type">
+                    <option value="">Select publisher type</option>
+                    <option value="government">Government</option>
+                    <option value="ngo_ingo">NGO / INGO</option>
+                    <option value="private">Private</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="documentSourceUrl">Source link</label>
+                  <input type="url" id="documentSourceUrl" name="document_source_url" placeholder="https://example.org/original-document" autocomplete="off">
+                </div>
+              </div>
+              <label for="documentNote">Brief note <span class="optional-label">(optional)</span></label>
+              <textarea id="documentNote" name="document_note" maxlength="5000" placeholder="One or two sentences about this document, if useful."></textarea>
+            </div>
+            <div id="mediaDetailsFields" class="full">
+              <div class="form-grid">
             <div class="full">
               <label for="capturedAt" data-i18n="whenTaken">When was it taken?</label>
               <input type="text" id="capturedAt" name="captured_at" maxlength="120" placeholder="e.g. Aug 26, 2026, early morning" data-i18n-placeholder="capturedPlaceholder" autocomplete="off">
@@ -172,6 +193,8 @@
             <div class="full">
               <label for="description" data-i18n="descriptionLabel">What happened? Any additional information</label>
               <textarea id="description" name="description" maxlength="5000" placeholder="Describe what the photo or video shows, and any details that help others understand or verify it." data-i18n-placeholder="descriptionPlaceholder"></textarea>
+            </div>
+              </div>
             </div>
           </div>
         </div>

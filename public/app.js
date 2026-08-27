@@ -270,6 +270,11 @@ function matchesTypeAndSearch(item) {
   return activeFilters.has(item.media_type) && panelVisible && matchesSearch(item) && matchesTimeline(item);
 }
 
+function hasMapLocation(item) {
+  return item.media_type !== 'document' && Number.isFinite(Number(item.lat)) && Number.isFinite(Number(item.lng)) &&
+    Number(item.lat) >= 26 && Number(item.lat) <= 31 && Number(item.lng) >= 79.5 && Number(item.lng) <= 89;
+}
+
 function clearDisplayedEvidenceMarkers() {
   markers.forEach((marker) => {
     if (map.hasLayer(marker)) map.removeLayer(marker);
@@ -282,7 +287,7 @@ function clearDisplayedEvidenceMarkers() {
 
 function refreshMarkerDisplay() {
   clearDisplayedEvidenceMarkers();
-  const visible = Array.from(itemsById.values()).filter(matchesTypeAndSearch);
+  const visible = Array.from(itemsById.values()).filter(matchesTypeAndSearch).filter(hasMapLocation);
   const zoom = map.getZoom();
   if (zoom >= 14) {
     visible.forEach((item) => {
@@ -329,6 +334,9 @@ window.thumbFallback = function thumbFallback() {
 
 function mediaThumb(item, popup = true) {
   const className = popup ? 'popup-thumb' : 'detail-media';
+  if (item.media_type === 'document' && !(item.mime_type || '').startsWith('image/')) {
+    return '<div class="' + className + ' video">📄 Document file</div>';
+  }
   if (item.media_type === 'video') {
     if (item.drive_url && item.drive_url.startsWith('https://storage.googleapis.com/')) {
       const frameClass = popup ? 'popup-thumb popup-video-frame' : 'detail-media video-frame';
@@ -435,15 +443,15 @@ function renderEvidencePanel() {
   $('#panelStatContributors').textContent = contributors.size;
   list.innerHTML = visible.length ? visible.map((item) => '<article class="evidence-card" data-evidence-id="' + item.id + '">' +
     (item.thumbnailUrl ? '<img src="' + esc(item.thumbnailUrl) + '" alt="" loading="lazy">' : '<div class="evidence-card-placeholder">' + (item.media_type === 'video' ? '🎥' : item.media_type === 'document' ? '📄' : '📷') + '</div>') +
-    '<div><h3>' + esc(item.title) + '</h3><p>' + (item.source_url ? tr('social') : item.media_type === 'photo' ? tr('photo') : item.media_type === 'video' ? tr('video') : tr('document')) + (item.captured_at ? ' · ' + esc(item.captured_at) : '') + '</p><p>' + esc(item.location_name || 'Location not provided') + '</p><p>' + locationLabel(item) + '</p></div></article>').join('') : '<p class="panel-empty">' + tr('noMatches') + '</p>';
+    '<div><h3>' + esc(item.title) + '</h3><p>' + (item.source_url ? tr('social') : item.media_type === 'photo' ? tr('photo') : item.media_type === 'video' ? tr('video') : tr('document')) + (item.captured_at ? ' · ' + esc(item.captured_at) : '') + '</p>' + (item.media_type === 'document' ? '<p>' + esc(publisherTypeLabel(item.publisher_type)) + '</p>' : '<p>' + esc(item.location_name || 'Location not provided') + '</p><p>' + locationLabel(item) + '</p>') + '</div></article>').join('') : '<p class="panel-empty">' + tr('noMatches') + '</p>';
   renderLatestEvidence();
   list.querySelectorAll('.evidence-card').forEach((card) => card.addEventListener('click', () => {
     const item = itemsById.get(Number(card.dataset.evidenceId));
-    const marker = item && markers.get(item.id);
-    if (!item || !marker) return;
+    if (!item) return;
+    const marker = markers.get(item.id);
     document.querySelectorAll('.evidence-card.selected').forEach((el) => el.classList.remove('selected'));
     card.classList.add('selected');
-    map.flyTo([item.lat, item.lng], Math.max(map.getZoom(), 13), { duration: .6 });
+    if (marker) map.flyTo([item.lat, item.lng], Math.max(map.getZoom(), 13), { duration: .6 });
     openDetailPanel(item);
   }));
 }
@@ -516,9 +524,9 @@ function renderLatestEvidence() {
     '<strong>' + esc(shorten(item.title || 'Untitled evidence', 42)) + '</strong><small>' + esc(item.captured_at || tr('noDate')) + '</small></button>').join('');
   list.querySelectorAll('.latest-card').forEach((card) => card.addEventListener('click', () => {
     const item = itemsById.get(Number(card.dataset.evidenceId));
-    const marker = item && markers.get(item.id);
-    if (!item || !marker) return;
-    map.flyTo([item.lat, item.lng], Math.max(map.getZoom(), 13), { duration: .6 });
+    if (!item) return;
+    const marker = markers.get(item.id);
+    if (marker) map.flyTo([item.lat, item.lng], Math.max(map.getZoom(), 13), { duration: .6 });
     openDetailPanel(item);
   }));
 }
@@ -541,13 +549,15 @@ function addItem(item) {
     markers.delete(item.id);
   }
   itemsById.set(item.id, item);
-  const marker = L.marker([item.lat, item.lng], { icon: pinIcon(item.media_type), title: item.title });
-  marker.bindPopup(popupHtml(item), { maxWidth: 340 });
-  marker.on('click', () => {
-    marker.closePopup();
-    openDetailPanel(item);
-  });
-  markers.set(item.id, marker);
+  if (hasMapLocation(item)) {
+    const marker = L.marker([item.lat, item.lng], { icon: pinIcon(item.media_type), title: item.title });
+    marker.bindPopup(popupHtml(item), { maxWidth: 340 });
+    marker.on('click', () => {
+      marker.closePopup();
+      openDetailPanel(item);
+    });
+    markers.set(item.id, marker);
+  }
   updateCount();
   updateTimelineDates();
   $('#emptyState').classList.add('hidden');
@@ -658,7 +668,13 @@ function detailHtml(item) {
   let typeLabel = '📷 Photo';
   if (item.media_type === 'video') typeLabel = '🎥 Video';
   else if (item.media_type === 'document') typeLabel = '📄 Document';
-  const rows = [
+  const rows = item.media_type === 'document' ? [
+    ['Type', typeLabel],
+    ['Stored in', 'Project Google Cloud Storage archive'],
+    ['File', esc(item.original_filename || 'Archived document')],
+    ['Publisher type', esc(publisherTypeLabel(item.publisher_type))],
+    ['Added on', esc(new Date(item.submitted_at).toLocaleString())],
+  ] : [
     ['Type', typeLabel],
     ['Stored in', 'Project Google Cloud Storage archive'],
     ['File', esc(item.original_filename || 'Archived media')],
@@ -670,12 +686,17 @@ function detailHtml(item) {
     ['Added on', esc(new Date(item.submitted_at).toLocaleString())],
   ];
   if (item.source_url) rows.splice(3, 0, ['Original source', sourceLabel(item)]);
+  if (item.document_source_url) rows.splice(3, 0, ['Source link', '<a href="' + esc(item.document_source_url) + '" target="_blank" rel="noopener noreferrer">Open original document ↗</a>']);
   const downvotes = item.downvotes || 0;
   if (downvotes > 0) rows.push(['Community feedback', downvotes + ' downvote' + (downvotes === 1 ? '' : 's')]);
   const meta = rows.map(([key, value]) => '<tr><td>' + key + '</td><td>' + value + '</td></tr>').join('');
-  const descBlock = item.description ? '<div class="detail-desc"><h3>What happened</h3><p>' + esc(item.description) + '</p></div>' : '';
+  const descBlock = item.description ? '<div class="detail-desc"><h3>' + (item.media_type === 'document' ? 'Brief note' : 'What happened') + '</h3><p>' + esc(item.description) + '</p></div>' : '';
   const detailType = item.media_type === 'photo' ? 'Photo' : item.media_type === 'video' ? 'Video' : 'Document';
   return '<h3 class="detail-title">' + esc(item.title) + '</h3><span class="detail-badge">' + detailType + '</span>' + mediaThumb(item, false) + descBlock + '<table class="meta-table"><tbody>' + meta + '</tbody></table><div class="detail-actions"><a class="btn-primary" href="' + esc(item.previewUrl || item.drive_url) + '" target="_blank" rel="noopener noreferrer">Open archived media ↗</a><button class="btn-downvote-detail" type="button" onclick="downvoteItem(' + item.id + ')" title="Flag as inaccurate">👎 Flag as inaccurate</button></div><p class="verify-note">The archived copy is the primary evidence record. The original social link is preserved separately as provenance. Items flagged by 50+ community members are automatically hidden.</p>';
+}
+
+function publisherTypeLabel(value) {
+  return ({ government: 'Government', ngo_ingo: 'NGO / INGO', private: 'Private' })[value] || 'Not provided';
 }
 
 window.openDetail = function openDetail(id) {
@@ -742,12 +763,24 @@ function currentMode() {
   return document.querySelector('input[name="ingest_mode"]:checked').value;
 }
 
+function selectedMediaType() {
+  return document.querySelector('input[name="media_type"]:checked')?.value || 'photo';
+}
+
 function updateIngestMode() {
-  const importing = currentMode() === 'import';
+  const documentMode = selectedMediaType() === 'document';
+  const importing = !documentMode && currentMode() === 'import';
+  if (documentMode) $('#modeUpload').checked = true;
+  $('#ingestModeBlock').classList.toggle('hidden', documentMode);
   $('#uploadInputBlock').classList.toggle('hidden', importing);
   $('#importInputBlock').classList.toggle('hidden', !importing);
   $('#mediaTypeBlock').classList.toggle('hidden', importing);
+  $('#locationSection').classList.toggle('hidden', documentMode);
+  $('#documentDetailsBlock').classList.toggle('hidden', !documentMode);
+  $('#mediaDetailsFields').classList.toggle('hidden', documentMode);
   $('#mediaFile').required = !importing;
+  $('#mediaFile').accept = documentMode ? 'application/pdf,image/*' : 'image/*,video/*,application/pdf';
+  $('#mediaFileLabel').textContent = documentMode ? 'Document file (PDF or image)' : 'Photo or video file';
   if (importing) {
     $('#archiveStatus').classList.add('hidden');
     $('#mediaFile').value = '';
@@ -846,16 +879,17 @@ function updateLocalPreview() {
   const image = $('#localImagePreview');
   const video = $('#localVideoPreview');
   const isImage = file.type.startsWith('image/');
+  const isVideo = file.type.startsWith('video/');
   image.classList.toggle('hidden', !isImage);
-  video.classList.toggle('hidden', isImage);
+  video.classList.toggle('hidden', !isVideo);
   if (isImage) image.src = url;
-  else video.src = url;
+  else if (isVideo) video.src = url;
   $('#localFileName').textContent = file.name + ' · ' + Math.ceil(file.size / 1024 / 1024) + ' MB';
   $('#localPreview').classList.remove('hidden');
   fillTitleFromFile(file);
 
   // Auto-fill available camera metadata without replacing user-entered values.
-  if (isImage) {
+  if (isImage && selectedMediaType() !== 'document') {
     extractPhotoMetadata(file).then((metadata) => {
       if ($('#mediaFile').files[0] !== file || !metadata) return;
       if (metadata.capturedAt && !$('#capturedAt').value.trim()) {
@@ -1012,7 +1046,8 @@ function startPendingPoll() {
 
 function validateForm() {
   const errors = [];
-  const importing = currentMode() === 'import';
+  const documentMode = selectedMediaType() === 'document';
+  const importing = !documentMode && currentMode() === 'import';
   const file = $('#mediaFile').files[0];
   const source = $('#sourceUrl').value.trim();
   if (!importing && file && !$('#title').value.trim()) fillTitleFromFile(file);
@@ -1021,11 +1056,22 @@ function validateForm() {
   if (importing) {
     if (!source) errors.push('Paste the Facebook, X, or Twitter post link to import.');
     else if (!parseSocial(source)) errors.push('The source link must be a Facebook, X, or Twitter post link.');
+  } else if (documentMode) {
+    if (!file) errors.push('Choose the document file you want to archive.');
+    if (file && file.type !== 'application/pdf' && !file.type.startsWith('image/')) errors.push('Choose a PDF or image file for the document.');
+    if (!$('#publisherType').value) errors.push('Choose the document publisher type.');
+    const sourceLink = $('#documentSourceUrl').value.trim();
+    if (sourceLink) {
+      try {
+        const url = new URL(sourceLink);
+        if (!['http:', 'https:'].includes(url.protocol)) errors.push('The document source link must use http or https.');
+      } catch { errors.push('Enter a valid document source link.'); }
+    }
   } else {
     if (!file) errors.push('Choose the photo or video you want to archive.');
     if (file && !/^(image|video)\//.test(file.type)) errors.push('Choose an image or video file.');
   }
-  if (!locationConfirmed) errors.push('Set the location by clicking the map or checking "I don\'t know exact location".');
+  if (!documentMode && !locationConfirmed) errors.push('Set the location by clicking the map or checking "I don\'t know exact location".');
   if (!title) errors.push('Give this item a short title.');
   if (!$('#ackCheck').checked) errors.push('Tick the confirmation box to state this item is authentic.');
   return errors;
@@ -1037,23 +1083,31 @@ async function submitItem(e) {
   showErrors(errors);
   if (errors.length) return;
 
-  const importing = currentMode() === 'import';
+  const mediaType = selectedMediaType();
+  const documentMode = mediaType === 'document';
+  const importing = !documentMode && currentMode() === 'import';
   const formData = new FormData();
   if (!importing) {
     formData.append('media', $('#mediaFile').files[0]);
-    formData.append('media_type', document.querySelector('input[name="media_type"]:checked').value);
+    formData.append('media_type', mediaType);
   }
   if (importing) formData.append('source_url', $('#sourceUrl').value.trim());
   formData.append('title', $('#title').value.trim());
-  formData.append('description', $('#description').value.trim());
-  formData.append('location_name', $('#locationName').value.trim());
-  formData.append('lat', selectedLat);
-  formData.append('lng', selectedLng);
-  formData.append('location_source', locationSource || 'User-set');
-  formData.append('captured_at', $('#capturedAt').value.trim());
-  formData.append('taken_by', $('#takenBy').value.trim());
-  formData.append('owner', $('#owner').value.trim());
-  formData.append('contact', $('#contact').value.trim());
+  if (documentMode) {
+    formData.append('description', $('#documentNote').value.trim());
+    formData.append('document_source_url', $('#documentSourceUrl').value.trim());
+    formData.append('publisher_type', $('#publisherType').value);
+  } else {
+    formData.append('description', $('#description').value.trim());
+    formData.append('location_name', $('#locationName').value.trim());
+    formData.append('lat', selectedLat);
+    formData.append('lng', selectedLng);
+    formData.append('location_source', locationSource || 'User-set');
+    formData.append('captured_at', $('#capturedAt').value.trim());
+    formData.append('taken_by', $('#takenBy').value.trim());
+    formData.append('owner', $('#owner').value.trim());
+    formData.append('contact', $('#contact').value.trim());
+  }
   formData.append('acknowledged', '1');
   formData.append('website', $('#honeypot').value);
 
@@ -1078,10 +1132,10 @@ async function submitItem(e) {
       toast('Import started — archiving in the background ✔');
     } else {
       closeModal('uploadModal');
-      toast('Archived in cloud storage and added to the map ✔');
+      toast(documentMode ? 'Archived in cloud storage and added to the archive ✔' : 'Archived in cloud storage and added to the map ✔');
       if (data.item) {
         addItem(data.item);
-        map.flyTo([data.item.lat, data.item.lng], Math.max(map.getZoom(), 13), { duration: 1 });
+        if (hasMapLocation(data.item)) map.flyTo([data.item.lat, data.item.lng], Math.max(map.getZoom(), 13), { duration: 1 });
       }
     }
   } catch {
@@ -1098,7 +1152,7 @@ $('#addDocsBtn').addEventListener('click', () => {
   openUpload();
   setTimeout(() => {
     const docRadio = document.querySelector('input[name="media_type"][value="document"]');
-    if (docRadio) docRadio.checked = true;
+    if (docRadio) { docRadio.checked = true; updateIngestMode(); }
   }, 100);
 });
 $('#emptyAddBtn').addEventListener('click', openUpload);
@@ -1106,7 +1160,7 @@ $('#emptyDocsBtn').addEventListener('click', () => {
   openUpload();
   setTimeout(() => {
     const docRadio = document.querySelector('input[name="media_type"][value="document"]');
-    if (docRadio) docRadio.checked = true;
+    if (docRadio) { docRadio.checked = true; updateIngestMode(); }
   }, 100);
 });
 $('#howBtn').addEventListener('click', () => openModal('howModal'));
@@ -1130,6 +1184,7 @@ $('#timelineReset').addEventListener('click', () => {
   updateFilterVisibility();
 });
 document.querySelectorAll('.language-btn').forEach((button) => button.addEventListener('click', () => applyLanguage(button.dataset.language)));
+document.querySelectorAll('input[name="ingest_mode"], input[name="media_type"]').forEach((input) => input.addEventListener('change', updateIngestMode));
 $('#downloadMetadataBtn').addEventListener('click', downloadMetadataSheet);
 $('#streetMapBtn').addEventListener('click', () => setMapStyle('street'));
 $('#satelliteMapBtn').addEventListener('click', () => setMapStyle('satellite'));
@@ -1175,7 +1230,6 @@ $('#title').addEventListener('input', () => {
 });
 $('#sourceUrl').addEventListener('input', updateSourceHint);
 $('#unknownLocation').addEventListener('change', handleUnknownLocation);
-document.querySelectorAll('input[name="ingest_mode"]').forEach((input) => input.addEventListener('change', updateIngestMode));
 document.querySelectorAll('[data-close]').forEach((btn) => btn.addEventListener('click', () => closeModal(btn.dataset.close)));
 $('#useMyLocation').addEventListener('click', () => {
   if (!navigator.geolocation) { toast('Location is not available on this device.'); return; }
