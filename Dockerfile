@@ -2,7 +2,7 @@
 # Runs the full Node app (uploads + social downloads + Google Drive archive)
 # with Python 3.10+ and FFmpeg so yt-dlp can download and merge videos.
 
-FROM node:20-bookworm-slim
+FROM node:24-bookworm-slim
 
 # Python + FFmpeg for social-media downloads via the bundled yt-dlp.
 RUN apt-get update \
