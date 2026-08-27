@@ -12,7 +12,7 @@ const db = require('./database');
 const { listAllItems } = db;
 const { parseDriveLink, thumbnailUrl } = require('./drive');
 const { parseSocialLink } = require('./social');
-const { getDriveConfig, uploadToDrive } = require('./drive-storage');
+const { getDriveConfig, uploadToDrive, archiveMetadataCopies } = require('./drive-storage');
 const { downloadSocialMedia, cleanupDownloadedMedia, extractSocialMetadata } = require('./social-download');
 
 const app = express();
@@ -345,7 +345,7 @@ async function processSocialImport(itemId, sourceUrl, mediaType) {
       mimeType: downloaded.mimeType,
       folderKey: 'download',
     });
-    await db.updateItem(itemId, {
+    const item = await db.updateItem(itemId, {
       drive_url: result.driveUrl,
       drive_file_id: result.fileId,
       storage_type: result.driveUrl.startsWith('https://storage.googleapis.com/') ? 'gcs' : 'drive',
@@ -355,6 +355,7 @@ async function processSocialImport(itemId, sourceUrl, mediaType) {
       media_type: downloaded.mediaType,
       status: 'published',
     });
+    if (item) await archiveMetadataCopies(item, await db.listAllItems());
     console.log(`Social import ${itemId} completed: ${result.filename}`);
   } catch (error) {
     console.error(`Social import ${itemId} failed:`, error.message);
@@ -525,6 +526,7 @@ async function createItemHandler(req, res) {
     acknowledged: 1,
     submitted_at: new Date().toISOString(),
   });
+  await archiveMetadataCopies(item, await db.listAllItems());
   res.status(201).json({ item: serialize(item) });
 }
 

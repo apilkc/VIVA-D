@@ -147,6 +147,44 @@ async function uploadToGcs({ filepath, filename, mimeType, folderKey = '' }) {
   };
 }
 
+function metadataCsv(items) {
+  const headers = ['id', 'title', 'media_type', 'captured_at', 'location_name', 'lat', 'lng', 'location_source', 'taken_by', 'owner', 'source_url', 'document_source_url', 'publisher_type', 'drive_url', 'submitted_at'];
+  const cell = (value) => '"' + String(value ?? '').replace(/"/g, '""') + '"';
+  return [headers.join(','), ...items.map((item) => headers.map((key) => cell(item[key])).join(','))].join('\n') + '\n';
+}
+
+// GCS is an independent, append-only recovery copy of public archive metadata.
+// A failed backup never rejects a valid public submission; it is logged instead.
+async function archiveMetadataCopies(item, items) {
+  const gcsConfig = getGcsConfig();
+  if (!gcsConfig) return false;
+  const { Storage } = require('@google-cloud/storage');
+  const credentials = gcsConfig.serviceAccount.keyFile ? undefined : {
+    client_email: gcsConfig.serviceAccount.clientEmail,
+    private_key: gcsConfig.serviceAccount.privateKey,
+  };
+  const storage = new Storage(gcsConfig.serviceAccount.keyFile ? { keyFilename: gcsConfig.serviceAccount.keyFile } : { credentials });
+  const bucket = storage.bucket(gcsConfig.bucket);
+  const generatedAt = new Date().toISOString();
+  const stamp = generatedAt.replace(/[:.]/g, '-');
+  const snapshot = { generated_at: generatedAt, items };
+  const json = JSON.stringify(snapshot, null, 2);
+  const csv = metadataCsv(items);
+  try {
+    await Promise.all([
+      bucket.file('metadata/items/' + item.id + '.json').save(JSON.stringify(item, null, 2), { contentType: 'application/json' }),
+      bucket.file('metadata/exports/latest.json').save(json, { contentType: 'application/json' }),
+      bucket.file('metadata/exports/latest.csv').save(csv, { contentType: 'text/csv' }),
+      bucket.file('metadata/exports/history/' + stamp + '.json').save(json, { contentType: 'application/json' }),
+      bucket.file('metadata/exports/history/' + stamp + '.csv').save(csv, { contentType: 'text/csv' }),
+    ]);
+    return true;
+  } catch (error) {
+    console.error('GCS metadata backup failed:', error.message);
+    return false;
+  }
+}
+
 async function uploadToDrive({ filepath, filename, mimeType, folderKey = '' }) {
   // Prefer GCS when configured (service accounts work with GCS, not personal Drive)
   if (getGcsConfig()) {
@@ -195,4 +233,4 @@ async function uploadToDrive({ filepath, filename, mimeType, folderKey = '' }) {
   };
 }
 
-module.exports = { getDriveConfig, createDriveClient, uploadToDrive, getFolderIds, getGcsConfig, uploadToGcs };
+module.exports = { getDriveConfig, createDriveClient, uploadToDrive, getFolderIds, getGcsConfig, uploadToGcs, archiveMetadataCopies };
