@@ -76,6 +76,15 @@ const MAX_LEN = {
   contact: 300,
 };
 
+function titleFromFilename(filename) {
+  return String(filename || '')
+    .replace(/\.[^.]+$/, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, MAX_LEN.title);
+}
+
 function clean(body) {
   const b = body || {};
   const s = (key) => (typeof b[key] === 'string' ? b[key].trim() : '');
@@ -92,7 +101,7 @@ function clean(body) {
     taken_by: s('taken_by'),
     owner: s('owner'),
     contact: s('contact'),
-    location_source: s('location_source'),
+    location_source: s('location_source') || 'User-set',
     acknowledged: b.acknowledged,
     website: s('website'),
   };
@@ -150,6 +159,9 @@ function validate(v, { directUpload = false, socialImport = false, file = null }
   if (v.taken_by.length > MAX_LEN.taken_by) errors.push('The "taken by" field is too long.');
   if (v.owner.length > MAX_LEN.owner) errors.push('The owner field is too long.');
   if (v.contact.length > MAX_LEN.contact) errors.push('The contact field is too long.');
+  if (!['Photo GPS', 'GPS', 'Approximate', 'User-set'].includes(v.location_source)) {
+    errors.push('Choose a valid location source.');
+  }
 
   if (!Number.isFinite(v.lat) || v.lat < BOUNDS.latMin || v.lat > BOUNDS.latMax) {
     errors.push('Please set a valid location on the map (latitude).');
@@ -327,6 +339,7 @@ async function createItemHandler(req, res) {
   }
 
   const v = clean(body);
+  if (directUpload && !v.title) v.title = titleFromFilename(req.file.originalname);
   // A JSON request with a Drive link is retained for legacy records; the
   // public form uses source_url alone to request a social-media import.
   const sourceImport = !directUpload && hasSourceUrl && !v.drive_url;
@@ -375,6 +388,7 @@ async function createItemHandler(req, res) {
       taken_by: v.taken_by,
       owner: v.owner,
       contact: v.contact,
+      location_source: v.location_source,
       acknowledged: 1,
       submitted_at: new Date().toISOString(),
       status: 'pending',
@@ -450,6 +464,7 @@ async function createItemHandler(req, res) {
     taken_by: v.taken_by,
     owner: v.owner,
     contact: v.contact,
+    location_source: v.location_source,
     acknowledged: 1,
     submitted_at: new Date().toISOString(),
   });

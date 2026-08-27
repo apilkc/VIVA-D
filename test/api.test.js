@@ -71,9 +71,10 @@ test('parses social source URLs for provenance', () => {
 });
 
 test('creates a valid legacy item, published immediately, with a thumbnail URL', async () => {
-  const { status, data } = await post(validBody());
+  const { status, data } = await post(validBody({ location_source: 'Photo GPS' }));
   assert.equal(status, 201);
   assert.equal(data.item.title, 'Bridge washed out near Timure');
+  assert.equal(data.item.location_source, 'Photo GPS');
   assert.equal(data.item.thumbnailUrl, 'https://drive.google.com/thumbnail?id=ABC123xyz&sz=w800');
   assert.equal(typeof data.item.id, 'number');
 });
@@ -178,6 +179,19 @@ test('returns a clear error for direct uploads without Drive configuration', asy
   form.append('media', new Blob(['fake image'], { type: 'image/jpeg' }), 'evidence.jpg');
   form.append('media_type', 'photo');
   form.append('title', 'Direct upload test');
+  form.append('lat', '28.2');
+  form.append('lng', '85.3');
+  form.append('acknowledged', '1');
+  const res = await fetch(`${base}/api/items`, { method: 'POST', body: form });
+  assert.equal(res.status, 503);
+  const data = await res.json();
+  assert.match(data.error, /not configured/i);
+});
+
+test('derives a missing direct-upload title from the filename', async () => {
+  const form = new FormData();
+  form.append('media', new Blob(['fake image'], { type: 'image/jpeg' }), 'bridge_washed-out-near_timure.jpg');
+  form.append('media_type', 'photo');
   form.append('lat', '28.2');
   form.append('lng', '85.3');
   form.append('acknowledged', '1');
