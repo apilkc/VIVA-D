@@ -32,6 +32,8 @@ USER node
 # Railway injects PORT automatically. Default to 3000 otherwise.
 ENV NODE_ENV=production
 ENV PORT=3000
+# Enable OpenSSL legacy provider so gtoken can sign service-account JWTs.
+ENV NODE_OPTIONS=--openssl-legacy-provider
 EXPOSE 3000
 
 CMD ["node", "server.js"]
