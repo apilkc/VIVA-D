@@ -8,7 +8,7 @@ const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
 
-const db = require('./db');
+const db = require('./database');
 const { listAllItems } = db;
 const { parseDriveLink, thumbnailUrl } = require('./drive');
 const { parseSocialLink } = require('./social');
@@ -307,26 +307,32 @@ app.get('/api/social-metadata', async (req, res) => {
   }
 });
 
-app.get('/api/items', (req, res) => {
-  const items = (req.query.all === '1' ? db.listAllItems() : db.listItems()).map(serialize);
-  res.json({ items });
+app.get('/api/items', async (req, res, next) => {
+  try {
+    const items = (await (req.query.all === '1' ? db.listAllItems() : db.listItems())).map(serialize);
+    res.json({ items });
+  } catch (error) { next(error); }
 });
 
-app.get('/api/items/:id', (req, res) => {
+app.get('/api/items/:id', async (req, res, next) => {
   const id = Number(req.params.id);
-  const item = Number.isInteger(id) && id > 0 ? db.getItem(id) : null;
-  if (!item) return res.status(404).json({ error: 'Not found.' });
-  res.json({ item: serialize(item) });
+  try {
+    const item = Number.isInteger(id) && id > 0 ? await db.getItem(id) : null;
+    if (!item) return res.status(404).json({ error: 'Not found.' });
+    res.json({ item: serialize(item) });
+  } catch (error) { next(error); }
 });
 
-app.post('/api/items/:id/downvote', (req, res) => {
+app.post('/api/items/:id/downvote', async (req, res, next) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) {
     return res.status(400).json({ error: 'Invalid item ID.' });
   }
-  const item = db.downvoteItem(id);
-  if (!item) return res.status(404).json({ error: 'Not found.' });
-  res.json({ item: serialize(item), message: item.downvotes >= db.DOWNVOTE_THRESHOLD ? 'This item has been hidden due to community feedback.' : 'Thank you for your feedback.' });
+  try {
+    const item = await db.downvoteItem(id);
+    if (!item) return res.status(404).json({ error: 'Not found.' });
+    res.json({ item: serialize(item), message: item.downvotes >= db.DOWNVOTE_THRESHOLD ? 'This item has been hidden due to community feedback.' : 'Thank you for your feedback.' });
+  } catch (error) { next(error); }
 });
 
 async function processSocialImport(itemId, sourceUrl, mediaType) {
@@ -339,7 +345,7 @@ async function processSocialImport(itemId, sourceUrl, mediaType) {
       mimeType: downloaded.mimeType,
       folderKey: 'download',
     });
-    db.updateItem(itemId, {
+    await db.updateItem(itemId, {
       drive_url: result.driveUrl,
       drive_file_id: result.fileId,
       storage_type: result.driveUrl.startsWith('https://storage.googleapis.com/') ? 'gcs' : 'drive',
@@ -352,7 +358,7 @@ async function processSocialImport(itemId, sourceUrl, mediaType) {
     console.log(`Social import ${itemId} completed: ${result.filename}`);
   } catch (error) {
     console.error(`Social import ${itemId} failed:`, error.message);
-    db.updateItem(itemId, {
+    await db.updateItem(itemId, {
       drive_url: '',
       drive_file_id: '',
       storage_type: 'legacy_link',
@@ -415,7 +421,7 @@ async function createItemHandler(req, res) {
         error: 'Cloud storage is not configured yet. The site owner must finish storage setup before uploads can be archived.',
       });
     }
-    const item = db.createItem({
+    const item = await db.createItem({
       drive_url: '',
       drive_file_id: '',
       storage_type: 'pending',
@@ -498,7 +504,7 @@ async function createItemHandler(req, res) {
     removeTemporaryFile(req.file);
   }
 
-  const item = db.createItem({
+  const item = await db.createItem({
     ...stored,
     source_url: source ? source.url : '',
     document_source_url: v.document_source_url,
