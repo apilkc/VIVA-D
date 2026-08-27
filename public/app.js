@@ -50,6 +50,7 @@ function $(sel) { return document.querySelector(sel); }
 
 const itemsById = new Map();
 const markers = new Map();
+const activeFilters = new Set(['photo', 'video', 'document']);
 
 const map = L.map('map', { minZoom: 7 }).setView(DEFAULT_CENTER, DEFAULT_ZOOM);
 const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -238,6 +239,32 @@ function updateCount() {
   const n = itemsById.size;
   $('#countChip').textContent = n + (n === 1 ? ' item' : ' items');
 }
+
+function updateFilterVisibility() {
+  itemsById.forEach((item, id) => {
+    const marker = markers.get(id);
+    if (!marker) return;
+    if (activeFilters.has(item.media_type)) {
+      if (!map.hasLayer(marker)) marker.addTo(map);
+    } else {
+      if (map.hasLayer(marker)) map.removeLayer(marker);
+    }
+  });
+}
+
+document.querySelectorAll('.filter-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const type = btn.dataset.type;
+    if (activeFilters.has(type)) {
+      activeFilters.delete(type);
+      btn.classList.remove('active');
+    } else {
+      activeFilters.add(type);
+      btn.classList.add('active');
+    }
+    updateFilterVisibility();
+  });
+});
 
 window.detailImgFallback = function detailImgFallback() {
   return '<div class="detail-video">📷 Archived preview unavailable — open the file in Google Cloud Storage</div>';
@@ -672,7 +699,6 @@ async function submitItem(e) {
   }
 }
 
-$('#addBtn').addEventListener('click', openUpload);
 $('#addMediaBtn').addEventListener('click', openUpload);
 $('#addDocsBtn').addEventListener('click', () => {
   openUpload();
