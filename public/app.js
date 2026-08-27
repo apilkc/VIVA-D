@@ -1,7 +1,8 @@
 'use strict';
 
 const DEFAULT_CENTER = [28.17, 85.36];
-const DEFAULT_ZOOM = 11;
+const DEFAULT_ZOOM = 12;
+const MIN_MAP_ZOOM = 10;
 const MINI_ZOOM = 13;
 
 // Bhote Koshi river polyline points (approximate path through Rasuwa district)
@@ -52,7 +53,7 @@ const itemsById = new Map();
 const markers = new Map();
 const activeFilters = new Set(['photo', 'video', 'document']);
 
-const map = L.map('map', { minZoom: 7 }).setView(DEFAULT_CENTER, DEFAULT_ZOOM);
+const map = L.map('map', { minZoom: MIN_MAP_ZOOM, maxZoom: 20 }).setView(DEFAULT_CENTER, DEFAULT_ZOOM);
 const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   maxZoom: 19,
@@ -219,6 +220,11 @@ function popupHtml(item) {
 }
 
 function addItem(item) {
+  const existing = markers.get(item.id);
+  if (existing) {
+    map.removeLayer(existing);
+    markers.delete(item.id);
+  }
   itemsById.set(item.id, item);
   const marker = L.marker([item.lat, item.lng], { icon: pinIcon(item.media_type), title: item.title }).addTo(map);
   marker.bindPopup(popupHtml(item), { maxWidth: 340 });
@@ -227,16 +233,27 @@ function addItem(item) {
   $('#emptyState').classList.add('hidden');
 }
 
-async function loadItems() {
+async function loadItems({ silent = false } = {}) {
   try {
-    const res = await fetch('/api/items');
+    const res = await fetch('/api/items', { cache: 'no-store' });
     if (!res.ok) throw new Error('Bad response');
     const data = await res.json();
+    const serverIds = new Set(data.items.map((item) => item.id));
     data.items.forEach(addItem);
     if (itemsById.size === 0) $('#emptyState').classList.remove('hidden');
+    else $('#emptyState').classList.add('hidden');
+    updateFilterVisibility();
+    return true;
   } catch {
-    toast('Could not load the map data. Check that the server is running.');
+    if (!silent) toast('Could not load the map data. Check that the server is running.');
+    return false;
   }
+}
+
+let refreshTimer = null;
+function startLiveRefresh() {
+  if (refreshTimer) return;
+  refreshTimer = setInterval(() => loadItems({ silent: true }), 5000);
 }
 
 function updateCount() {
@@ -320,7 +337,8 @@ function detailHtml(item) {
   if (downvotes > 0) rows.push(['Community feedback', downvotes + ' downvote' + (downvotes === 1 ? '' : 's')]);
   const meta = rows.map(([key, value]) => '<tr><td>' + key + '</td><td>' + value + '</td></tr>').join('');
   const descBlock = item.description ? '<div class="detail-desc"><h3>What happened</h3><p>' + esc(item.description) + '</p></div>' : '';
-  return '<h3 class="detail-title">' + esc(item.title) + '</h3><span class="detail-badge">' + (item.media_type === 'photo' ? 'Photo' : 'Video') + '</span>' + mediaThumb(item, false) + descBlock + '<table class="meta-table"><tbody>' + meta + '</tbody></table><div class="detail-actions"><a class="btn-primary" href="' + esc(item.previewUrl || item.drive_url) + '" target="_blank" rel="noopener noreferrer">Open archived media ↗</a><button class="btn-downvote-detail" type="button" onclick="downvoteItem(' + item.id + ')" title="Flag as inaccurate">👎 Flag as inaccurate</button></div><p class="verify-note">The archived copy is the primary evidence record. The original social link is preserved separately as provenance. Items flagged by 50+ community members are automatically hidden.</p>';
+  const detailType = item.media_type === 'photo' ? 'Photo' : item.media_type === 'video' ? 'Video' : 'Document';
+  return '<h3 class="detail-title">' + esc(item.title) + '</h3><span class="detail-badge">' + detailType + '</span>' + mediaThumb(item, false) + descBlock + '<table class="meta-table"><tbody>' + meta + '</tbody></table><div class="detail-actions"><a class="btn-primary" href="' + esc(item.previewUrl || item.drive_url) + '" target="_blank" rel="noopener noreferrer">Open archived media ↗</a><button class="btn-downvote-detail" type="button" onclick="downvoteItem(' + item.id + ')" title="Flag as inaccurate">👎 Flag as inaccurate</button></div><p class="verify-note">The archived copy is the primary evidence record. The original social link is preserved separately as provenance. Items flagged by 50+ community members are automatically hidden.</p>';
 }
 
 window.openDetail = function openDetail(id) {
@@ -688,7 +706,7 @@ async function submitItem(e) {
       toast('Import started — archiving in the background ✔');
     } else {
       closeModal('uploadModal');
-      toast('Archived in Google Drive and added to the map ✔');
+      toast('Archived in cloud storage and added to the map ✔');
       if (data.item) {
         addItem(data.item);
         map.flyTo([data.item.lat, data.item.lng], Math.max(map.getZoom(), 13), { duration: 1 });
@@ -748,4 +766,4 @@ $('#useMyLocation').addEventListener('click', () => {
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') ['uploadModal', 'detailModal', 'howModal'].forEach(closeModal); });
 
-loadItems();
+loadItems().then(startLiveRefresh);

@@ -286,7 +286,7 @@ async function processSocialImport(itemId, sourceUrl, mediaType) {
     db.updateItem(itemId, {
       drive_url: result.driveUrl,
       drive_file_id: result.fileId,
-      storage_type: 'drive',
+      storage_type: result.driveUrl.startsWith('https://storage.googleapis.com/') ? 'gcs' : 'drive',
       original_filename: result.filename,
       mime_type: result.mimeType,
       file_size: result.size,
@@ -347,9 +347,9 @@ async function createItemHandler(req, res) {
 
   // Social imports: return immediately with a pending item, process in background.
   if (sourceImport) {
-    if (!getDriveConfig()) {
+    if (!getDriveConfig() && !require('./drive-storage').getGcsConfig()) {
       return res.status(503).json({
-        error: 'Direct uploads are not configured yet. The site owner must connect Google Drive first.',
+        error: 'Cloud storage is not configured yet. The site owner must finish storage setup before uploads can be archived.',
       });
     }
     const item = db.createItem({
@@ -391,10 +391,10 @@ async function createItemHandler(req, res) {
   };
 
   if (directUpload) {
-    if (!getDriveConfig()) {
+    if (!getDriveConfig() && !require('./drive-storage').getGcsConfig()) {
       removeTemporaryFile(req.file);
       return res.status(503).json({
-        error: 'Direct uploads are not configured yet. The site owner must connect Google Drive first.',
+        error: 'Cloud storage is not configured yet. The site owner must finish storage setup before uploads can be archived.',
       });
     }
 
@@ -411,7 +411,7 @@ async function createItemHandler(req, res) {
         folderKey,
       });
       stored = {
-        storage_type: 'drive',
+        storage_type: result.driveUrl.startsWith('https://storage.googleapis.com/') ? 'gcs' : 'drive',
         drive_url: result.driveUrl,
         drive_file_id: result.fileId,
         original_filename: result.filename,
@@ -422,7 +422,7 @@ async function createItemHandler(req, res) {
       if (error.code === 'DRIVE_NOT_CONFIGURED') {
         removeTemporaryFile(req.file);
         return res.status(503).json({
-          error: 'Direct uploads are not configured yet. The site owner must connect Google Drive first.',
+          error: 'Cloud storage is not configured yet. The site owner must finish storage setup before uploads can be archived.',
         });
       }
       console.error('Media archive failed:', error);

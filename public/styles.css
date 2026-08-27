@@ -108,7 +108,7 @@ body {
 
 .map-style-control {
   position: absolute;
-  top: 56px;
+  top: 16px;
   right: 16px;
   z-index: 1000;
   display: flex;
@@ -164,7 +164,7 @@ body {
 
 .filter-bar {
   position: absolute;
-  top: 16px;
+  top: 62px;
   right: 16px;
   z-index: 1000;
   display: flex;
