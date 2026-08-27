@@ -23,6 +23,14 @@ app.use(express.json({ limit: '64kb' }));
 
 function serialize(item) {
   const driveFileId = item.drive_file_id || '';
+  const driveUrl = item.drive_url || '';
+  const isGcs = driveUrl.startsWith('https://storage.googleapis.com/');
+  let previewUrl = null;
+  if (isGcs) {
+    previewUrl = driveUrl;
+  } else if (driveFileId) {
+    previewUrl = `https://drive.google.com/file/d/${encodeURIComponent(driveFileId)}/preview`;
+  }
   return {
     id: item.id,
     status: item.status || 'published',
@@ -34,7 +42,7 @@ function serialize(item) {
     original_filename: item.original_filename || '',
     mime_type: item.mime_type || '',
     file_size: item.file_size || 0,
-    drive_url: item.drive_url || '',
+    drive_url: driveUrl,
     media_type: item.media_type,
     title: item.title,
     description: item.description,
@@ -46,8 +54,8 @@ function serialize(item) {
     owner: item.owner,
     contact: item.contact,
     submitted_at: item.submitted_at,
-    thumbnailUrl: driveFileId ? thumbnailUrl(driveFileId) : null,
-    previewUrl: driveFileId ? `https://drive.google.com/file/d/${encodeURIComponent(driveFileId)}/preview` : null,
+    thumbnailUrl: isGcs ? driveUrl : (driveFileId ? thumbnailUrl(driveFileId) : null),
+    previewUrl,
   };
 }
 
@@ -419,7 +427,7 @@ async function createItemHandler(req, res) {
       }
       console.error('Media archive failed:', error);
       removeTemporaryFile(req.file);
-      return res.status(502).json({ error: 'Google Drive could not save this file. Please try again.' });
+      return res.status(502).json({ error: 'Cloud Storage could not save this file. Please try again.' });
     }
     removeTemporaryFile(req.file);
   }

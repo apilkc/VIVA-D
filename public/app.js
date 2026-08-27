@@ -185,6 +185,10 @@ window.thumbFallback = function thumbFallback() {
 function mediaThumb(item, popup = true) {
   const className = popup ? 'popup-thumb' : 'detail-media';
   if (item.media_type === 'video') {
+    if (item.drive_url && item.drive_url.startsWith('https://storage.googleapis.com/')) {
+      const frameClass = popup ? 'popup-thumb popup-video-frame' : 'detail-media video-frame';
+      return '<video class="' + frameClass + '" controls preload="metadata"><source src="' + esc(item.drive_url) + '" type="' + esc(item.mime_type || 'video/mp4') + '"></video>';
+    }
     if (item.previewUrl) {
       const frameClass = popup ? 'popup-thumb popup-video-frame' : 'detail-media video-frame';
       return '<iframe class="' + frameClass + '" src="' + esc(item.previewUrl) + '" title="Archived video preview" allow="autoplay; fullscreen" allowfullscreen></iframe>';
