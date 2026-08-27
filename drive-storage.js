@@ -195,4 +195,4 @@ async function uploadToDrive({ filepath, filename, mimeType, folderKey = '' }) {
   };
 }
 
-module.exports = { getDriveConfig, createDriveClient, uploadToDrive, getFolderIds };
+module.exports = { getDriveConfig, createDriveClient, uploadToDrive, getFolderIds, getGcsConfig, uploadToGcs };
