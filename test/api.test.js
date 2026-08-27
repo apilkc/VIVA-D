@@ -62,6 +62,12 @@ test('reports map configuration separately from Drive configuration', async () =
   assert.equal(data.googleMapsApiKey, '');
 });
 
+test('formats EXIF photo capture dates for form autofill', () => {
+  assert.equal(app.locals.formatExifCaptureDate(new Date(2026, 7, 26, 6, 30)), '20260826');
+  assert.equal(app.locals.formatExifCaptureDate('2026:08:26 06:30:00'), '20260826');
+  assert.equal(app.locals.formatExifCaptureDate(''), '');
+});
+
 test('starts with an empty list', async () => {
   assert.deepEqual(await listItems(), []);
 });

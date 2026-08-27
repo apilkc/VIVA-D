@@ -806,16 +806,15 @@ function getRandomRiverPoint() {
   return [lat, lng];
 }
 
-// Extract EXIF GPS data from an image file using server endpoint
-async function extractGpsFromImage(file) {
+// Extract EXIF GPS and capture-date metadata using the server endpoint.
+async function extractPhotoMetadata(file) {
   if (!file || !file.type.startsWith('image/')) return null;
   try {
     const formData = new FormData();
     formData.append('image', file);
     const res = await fetch('/api/extract-gps', { method: 'POST', body: formData });
     if (!res.ok) return null;
-    const data = await res.json();
-    return data.gps || null;
+    return await res.json();
   } catch {
     return null;
   }
@@ -855,10 +854,16 @@ function updateLocalPreview() {
   $('#localPreview').classList.remove('hidden');
   fillTitleFromFile(file);
 
-  // Try to extract GPS data from image
-  if (isImage && !locationConfirmed && !$('#unknownLocation').checked) {
-    extractGpsFromImage(file).then((gps) => {
-      if (gps && gps.lat && gps.lng) {
+  // Auto-fill available camera metadata without replacing user-entered values.
+  if (isImage) {
+    extractPhotoMetadata(file).then((metadata) => {
+      if ($('#mediaFile').files[0] !== file || !metadata) return;
+      if (metadata.capturedAt && !$('#capturedAt').value.trim()) {
+        const formatted = formatDateForDisplay(metadata.capturedAt);
+        if (formatted) $('#capturedAt').value = formatted;
+      }
+      const gps = metadata.gps;
+      if (!locationConfirmed && !$('#unknownLocation').checked && gps && gps.lat && gps.lng) {
         // Check if within Nepal bounds
         if (gps.lat >= 26 && gps.lat <= 31 && gps.lng >= 79.5 && gps.lng <= 89) {
           pin.setLatLng([gps.lat, gps.lng]);
