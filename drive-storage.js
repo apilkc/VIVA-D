@@ -96,7 +96,63 @@ function createDriveClient(config = getDriveConfig({ requireFolder: false })) {
   return { drive: google.drive({ version: 'v3', auth }), folderId: config.folderId, folderIds: config.folderIds || {} };
 }
 
+function getGcsConfig() {
+  const bucket = process.env.GOOGLE_CLOUD_STORAGE_BUCKET || '';
+  if (!bucket) return null;
+
+  const serviceAccount = getServiceAccountCredentials();
+  if (!serviceAccount) return null;
+
+  return { bucket, serviceAccount };
+}
+
+async function uploadToGcs({ filepath, filename, mimeType, folderKey = '' }) {
+  const { Storage } = require('@google-cloud/storage');
+  const gcsConfig = getGcsConfig();
+  if (!gcsConfig) throw new Error('Google Cloud Storage is not configured.');
+
+  const credentials = gcsConfig.serviceAccount.keyFile
+    ? undefined
+    : {
+        client_email: gcsConfig.serviceAccount.clientEmail,
+        private_key: gcsConfig.serviceAccount.privateKey,
+      };
+
+  const storage = new Storage(
+    gcsConfig.serviceAccount.keyFile
+      ? { keyFilename: gcsConfig.serviceAccount.keyFile }
+      : { credentials }
+  );
+  const bucket = storage.bucket(gcsConfig.bucket);
+
+  const destPath = (folderKey || 'media') + '/' + Date.now() + '-' + filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const file = bucket.file(destPath);
+
+  await new Promise((resolve, reject) => {
+    fs.createReadStream(filepath)
+      .pipe(file.createWriteStream({ metadata: { contentType: mimeType } }))
+      .on('finish', resolve)
+      .on('error', reject);
+  });
+
+  const publicUrl = `https://storage.googleapis.com/${gcsConfig.bucket}/${destPath}`;
+  const stat = await file.getMetadata();
+
+  return {
+    fileId: destPath,
+    filename,
+    mimeType,
+    size: Number(stat[0].size) || fs.statSync(filepath).size,
+    driveUrl: publicUrl,
+  };
+}
+
 async function uploadToDrive({ filepath, filename, mimeType, folderKey = '' }) {
+  // Prefer GCS when configured (service accounts work with GCS, not personal Drive)
+  if (getGcsConfig()) {
+    return uploadToGcs({ filepath, filename, mimeType, folderKey });
+  }
+
   const config = getDriveConfig({ folderKey });
   const client = createDriveClient(config);
   const targetFolderId = folderKey && config?.folderIds?.[folderKey]

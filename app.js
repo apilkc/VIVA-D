@@ -159,10 +159,23 @@ function removeTemporaryFile(file) {
 /* ---------- routes ---------- */
 
 app.get('/api/config', (req, res) => {
-  res.json({
-    directUploadsEnabled: Boolean(getDriveConfig()),
-    googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || '',
-  });
+  try {
+    const { getGcsConfig } = require('./drive-storage');
+    const gcsReady = Boolean(getGcsConfig());
+    const driveReady = Boolean(getDriveConfig());
+    res.json({
+      directUploadsEnabled: gcsReady || driveReady,
+      googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || '',
+      storageType: gcsReady ? 'gcs' : driveReady ? 'drive' : 'none',
+    });
+  } catch {
+    const driveReady = Boolean(getDriveConfig());
+    res.json({
+      directUploadsEnabled: driveReady,
+      googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || '',
+      storageType: driveReady ? 'drive' : 'none',
+    });
+  }
 });
 
 /* ---------- EXIF GPS extraction ---------- */

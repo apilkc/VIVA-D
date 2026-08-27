@@ -14,6 +14,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@google-cloud/storage": "^8.0.1",
     "better-sqlite3": "^12.2.0",
     "dotenv": "^16.4.7",
     "exifr": "^7.1.3",
