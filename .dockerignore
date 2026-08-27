@@ -12,6 +12,8 @@ google-oauth-client*.json
 *-service-account*.json
 service-account*.json
 *-key.json
+*acct*.json
+railwayjson.json
 credentials/
 .git/
 .gitignore

@@ -11,6 +11,8 @@ data/
 *-service-account*.json
 service-account*.json
 *-key.json
+*acct*.json
+railwayjson.json
 google-oauth-client.json
 credentials/
 .oauth-token.json
