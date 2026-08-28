@@ -533,7 +533,7 @@ function renderLatestEvidence() {
   const latest = Array.from(itemsById.values()).filter((item) => {
     const matchesType = panelFilter === 'all' || (panelFilter === 'social' ? Boolean(item.source_url) : item.media_type === panelFilter);
     return matchesType && matchesSearch(item) && matchesTimeline(item);
-  }).sort(compareEvidence).slice(0, panelQuery ? 10 : 5);
+  }).sort(compareEvidence);
   list.innerHTML = latest.map((item) => '<button class="latest-card" type="button" data-evidence-id="' + item.id + '" onclick="openEvidencePanel(' + item.id + ')">' +
     latestThumbnail(item) +
     '<strong>' + esc(shorten(item.title || 'Untitled evidence', 42)) + '</strong><small>' + esc(item.captured_at || tr('noDate')) + '</small></button>').join('');
