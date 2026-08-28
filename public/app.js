@@ -60,6 +60,12 @@ let timelineDates = [];
 let timelineCutoff = null;
 let currentLanguage = 'en';
 
+// SQLite returns numeric IDs locally, while PostgreSQL returns BIGSERIAL IDs
+// as strings. Keep all evidence controls working with either database.
+function getEvidenceItem(id) {
+  return itemsById.get(String(id)) || itemsById.get(Number(id));
+}
+
 const translations = {
   en: {
     brandTitle: 'Rasuwa Flood Evidence Map', brandSub: 'Bhote Koshi Flood · 26 August 2026', archiveStatus: 'Public evidence archive',
@@ -456,7 +462,7 @@ function renderEvidencePanel() {
     '<div><h3>' + esc(item.title) + '</h3><p>' + (item.source_url ? tr('social') : item.media_type === 'photo' ? tr('photo') : item.media_type === 'video' ? tr('video') : tr('document')) + (item.captured_at ? ' · ' + esc(item.captured_at) : '') + '</p>' + (item.media_type === 'document' ? '<p>' + esc(publisherTypeLabel(item.publisher_type)) + '</p>' : '<p>' + esc(item.location_name || 'Location not provided') + '</p><p>' + locationLabel(item) + '</p>') + '</div></article>').join('') : '<p class="panel-empty">' + tr('noMatches') + '</p>';
   renderLatestEvidence();
   list.querySelectorAll('.evidence-card').forEach((card) => card.addEventListener('click', () => {
-    const item = itemsById.get(Number(card.dataset.evidenceId));
+    const item = getEvidenceItem(card.dataset.evidenceId);
     if (!item) return;
     const marker = markers.get(item.id);
     document.querySelectorAll('.evidence-card.selected').forEach((el) => el.classList.remove('selected'));
@@ -542,7 +548,7 @@ function focusEvidence(item) {
 // Kept on window because Latest evidence is rendered dynamically. Each card
 // calls this same action as a map marker, using its stored evidence ID.
 window.openEvidencePanel = function openEvidencePanel(id) {
-  const item = itemsById.get(Number(id));
+  const item = getEvidenceItem(id);
   if (item) focusEvidence(item);
 };
 
@@ -659,7 +665,7 @@ window.downvoteItem = async function downvoteItem(id) {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) { toast(data.error || 'Could not record feedback.'); return; }
     toast(data.message || 'Thank you for your feedback.');
-    const item = itemsById.get(id);
+    const item = getEvidenceItem(id);
     if (item) {
       item.downvotes = (item.downvotes || 0) + 1;
       if (item.downvotes >= 50) {
@@ -715,7 +721,7 @@ function publisherTypeLabel(value) {
 }
 
 window.openDetail = function openDetail(id) {
-  const item = itemsById.get(id);
+  const item = getEvidenceItem(id);
   if (!item) return;
   $('#detailBody').innerHTML = detailHtml(item);
   $('#detailModal').classList.remove('hidden');
