@@ -72,6 +72,16 @@ test('starts with an empty list', async () => {
   assert.deepEqual(await listItems(), []);
 });
 
+test('serves the browse overview and a selected folder with one response', async () => {
+  const overview = await fetch(`${base}/browse`);
+  assert.equal(overview.status, 200);
+  assert.match(await overview.text(), /Rasuwa Flood Evidence Archive/);
+
+  const folder = await fetch(`${base}/browse?folder=video`);
+  assert.equal(folder.status, 200);
+  assert.match(await folder.text(), /All Folders<\/a> \/ 🎥 Videos/);
+});
+
 test('parses social source URLs for provenance', () => {
   assert.equal(parseSocialLink('https://x.com/example/status/123456').platform, 'x');
 });

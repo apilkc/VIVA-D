@@ -766,7 +766,7 @@ app.get('/browse', async (req, res) => {
       '<td>' + formatSize(f.size) + '</td>' +
       '<td>' + (f.modified ? new Date(f.modified).toLocaleDateString() : '') + '</td></tr>'
     ).join('');
-    res.send(BROWSE_HTML.replace('{{FOLDER_TITLE}}', escHtml(folderInfo.label) + ' — ' + escHtml(folderInfo.desc))
+    return res.send(BROWSE_HTML.replace('{{FOLDER_TITLE}}', escHtml(folderInfo.label) + ' — ' + escHtml(folderInfo.desc))
       .replace('{{BREADCRUMB}}', '<a href="/browse">All Folders</a> / ' + escHtml(folderInfo.label))
       .replace('{{FILE_COUNT}}', files.length + ' file' + (files.length !== 1 ? 's' : ''))
       .replace('{{TOTAL_SIZE}}', formatSize(totalSize))
@@ -781,14 +781,16 @@ app.get('/browse', async (req, res) => {
       '<div class="browse-card-desc">' + escHtml(f.desc) + '</div>' +
       '<div class="browse-card-stats">' + files.length + ' file' + (files.length !== 1 ? 's' : '') + ' · ' + formatSize(totalSize) + '</div>' +
       '</a>';
-  }));    res.send(BROWSE_HTML.replace('{{FOLDER_TITLE}}', 'Rasuwa Flood Evidence Archive')
+  }));
+  return res.send(BROWSE_HTML.replace('{{FOLDER_TITLE}}', 'Rasuwa Flood Evidence Archive')
     .replace('{{BREADCRUMB}}', 'All Folders')
     .replace('{{FILE_COUNT}}', '')
     .replace('{{TOTAL_SIZE}}', '')
     .replace(/<table[\s\S]*<\/table>/, '<div class="browse-grid">' + folderCards.join('') + '</div>'));
   } catch (err) {
     console.error('Browse error:', err);
-    res.status(500).send('<h1>Error loading files</h1><p>' + escHtml(err.message) + '</p><a href="/browse">Try again</a>');
+    if (res.headersSent) return;
+    return res.status(500).send('<h1>Error loading files</h1><p>' + escHtml(err.message) + '</p><a href="/browse">Try again</a>');
   }
 });
 
