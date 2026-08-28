@@ -440,7 +440,7 @@ function evidenceIcon(item) {
 function latestThumbnail(item) {
   const fallback = '<span class="latest-placeholder" aria-hidden="true">' + evidenceIcon(item) + '</span>';
   if (!item.thumbnailUrl) return fallback;
-  return '<span class="latest-media"><img src="' + esc(item.thumbnailUrl) + '" alt="" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="latest-placeholder" aria-hidden="true" hidden>' + evidenceIcon(item) + '</span></span>';
+  return '<span class="latest-media"><img src="' + esc(item.thumbnailUrl) + '" alt="" loading="eager" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="latest-placeholder" aria-hidden="true" hidden>' + evidenceIcon(item) + '</span></span>';
 }
 
 function renderEvidencePanel() {
@@ -1232,6 +1232,10 @@ $('#aboutArchiveLink').addEventListener('click', (e) => { e.preventDefault(); op
 $('#metadataSheetBtn')?.addEventListener('click', openMetadataSheet);
 $('#panelMetadataBtn').addEventListener('click', openMetadataSheet);
 $('#detailCloseBtn').addEventListener('click', closeDetailPanel);
+$('#latestScrollNext').addEventListener('click', () => {
+  const list = $('#latestEvidence');
+  list.scrollBy({ left: Math.max(220, list.clientWidth * 0.8), behavior: 'smooth' });
+});
 $('#metadataUpdateForm').addEventListener('submit', submitMetadataUpdate);
 $('#sortEvidence').addEventListener('change', (e) => { panelSort = e.target.value; renderEvidencePanel(); });
 $('#timelineRange').addEventListener('input', (e) => {

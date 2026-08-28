@@ -117,6 +117,9 @@ body {
 #map { position:absolute; top:0; left:var(--evidence-panel-width); right:0; bottom:152px; }
 .latest-strip { position:absolute; left:var(--evidence-panel-width); right:0; bottom:34px; height:118px; z-index:840; background:rgba(255,255,255,.97); border-top:1px solid var(--border); padding:10px 16px 12px; transition:left .2s ease, right .2s ease; }
 .latest-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; font-size:.8rem; }
+.latest-scroll-hint { display:flex; align-items:center; gap:5px; color:var(--muted); font-size:.7rem; font-weight:600; }
+.latest-scroll-hint button { width:24px; height:24px; border:1px solid var(--border); border-radius:50%; background:#fff; color:var(--primary-dark); font:inherit; font-size:1rem; line-height:1; cursor:pointer; }
+.latest-scroll-hint button:hover { border-color:var(--primary); background:#eef4fd; }
 .latest-head a { color:var(--primary-dark); font-weight:700; text-decoration:none; }
 .latest-list { display:flex; gap:10px; overflow-x:auto; overflow-y:hidden; scroll-snap-type:x proximity; scrollbar-width:thin; -webkit-overflow-scrolling:touch; padding-bottom:2px; }
 .latest-card { flex:0 0 clamp(180px, 21vw, 240px); min-width:0; scroll-snap-align:start; display:grid; grid-template-columns:52px 1fr; grid-template-rows:auto auto; column-gap:8px; text-align:left; border:1px solid var(--border); border-radius:7px; padding:5px; background:#fff; color:var(--text); cursor:pointer; }
