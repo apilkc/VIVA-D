@@ -121,7 +121,11 @@ body {
 .latest-list { display:flex; gap:10px; overflow:hidden; }
 .latest-card { flex:1; min-width:0; display:grid; grid-template-columns:52px 1fr; grid-template-rows:auto auto; column-gap:8px; text-align:left; border:1px solid var(--border); border-radius:7px; padding:5px; background:#fff; color:var(--text); cursor:pointer; }
 .latest-card:hover { background:#f5f8fc; border-color:#b9cbe1; }
-.latest-card img, .latest-placeholder { grid-row:1 / 3; width:52px; height:46px; object-fit:cover; border-radius:4px; background:#eef2f6; display:flex; align-items:center; justify-content:center; }
+.latest-media, .latest-placeholder { grid-row:1 / 3; width:52px; height:46px; border-radius:4px; background:#eef2f6; display:flex; align-items:center; justify-content:center; }
+.latest-media { position:relative; overflow:hidden; }
+.latest-media img { width:100%; height:100%; object-fit:cover; display:block; }
+.latest-media .latest-placeholder { position:absolute; inset:0; color:var(--muted); font-size:1.1rem; }
+.latest-placeholder { color:var(--muted); font-size:1.1rem; }
 .latest-card strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.73rem; line-height:1.25; }
 .latest-card small { color:var(--muted); font-size:.68rem; margin-top:3px; }
 

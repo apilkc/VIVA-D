@@ -26,6 +26,10 @@ function serialize(item) {
   const driveFileId = item.drive_file_id || '';
   const driveUrl = item.drive_url || '';
   const isGcs = driveUrl.startsWith('https://storage.googleapis.com/');
+  // GCS returns the original file, so only direct image files can be used in
+  // an <img>. Video/PDF URLs otherwise create broken-image thumbnails.
+  const isImageFile = /^image\//i.test(item.mime_type || '')
+    || /\.(avif|gif|heic|jpe?g|png|webp)(?:$|[?#])/i.test(driveUrl);
   let previewUrl = null;
   if (isGcs) {
     previewUrl = driveUrl;
@@ -58,7 +62,7 @@ function serialize(item) {
     contact: item.contact,
     location_source: item.location_source || '',
     submitted_at: item.submitted_at,
-    thumbnailUrl: isGcs ? driveUrl : (driveFileId ? thumbnailUrl(driveFileId) : null),
+    thumbnailUrl: isGcs && isImageFile ? driveUrl : (!isGcs && driveFileId ? thumbnailUrl(driveFileId) : null),
     previewUrl,
   };
 }

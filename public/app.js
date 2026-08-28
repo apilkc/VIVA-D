@@ -427,6 +427,16 @@ function popupHtml(item) {
   return '<div class="popup-card">' + mediaThumb(item) + '<h3>' + esc(item.title) + '</h3>' + meta + desc + sourceLabel(item) + '<div class="popup-actions"><a class="btn-primary btn-sm" href="' + esc(item.previewUrl || item.drive_url) + '" target="_blank" rel="noopener noreferrer">Open archived media</a><button class="btn-ghost btn-sm" type="button" onclick="openDetail(' + item.id + ')">More details</button>' + downvoteBtn + '</div></div>';
 }
 
+function evidenceIcon(item) {
+  return item.media_type === 'video' ? '▶' : item.media_type === 'document' ? '▤' : '◉';
+}
+
+function latestThumbnail(item) {
+  const fallback = '<span class="latest-placeholder" aria-hidden="true">' + evidenceIcon(item) + '</span>';
+  if (!item.thumbnailUrl) return fallback;
+  return '<span class="latest-media"><img src="' + esc(item.thumbnailUrl) + '" alt="" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="latest-placeholder" aria-hidden="true" hidden>' + evidenceIcon(item) + '</span></span>';
+}
+
 function renderEvidencePanel() {
   const list = $('#evidenceList');
   if (!list) return;
@@ -442,7 +452,7 @@ function renderEvidencePanel() {
   $('#panelStatLocations').textContent = locations.size;
   $('#panelStatContributors').textContent = contributors.size;
   list.innerHTML = visible.length ? visible.map((item) => '<article class="evidence-card" data-evidence-id="' + item.id + '">' +
-    (item.thumbnailUrl ? '<img src="' + esc(item.thumbnailUrl) + '" alt="" loading="lazy">' : '<div class="evidence-card-placeholder">' + (item.media_type === 'video' ? '🎥' : item.media_type === 'document' ? '📄' : '📷') + '</div>') +
+    (item.thumbnailUrl ? '<img src="' + esc(item.thumbnailUrl) + '" alt="" loading="lazy" onerror="this.outerHTML=\'<div class=&quot;evidence-card-placeholder&quot;>' + evidenceIcon(item) + '</div>\'">' : '<div class="evidence-card-placeholder">' + evidenceIcon(item) + '</div>') +
     '<div><h3>' + esc(item.title) + '</h3><p>' + (item.source_url ? tr('social') : item.media_type === 'photo' ? tr('photo') : item.media_type === 'video' ? tr('video') : tr('document')) + (item.captured_at ? ' · ' + esc(item.captured_at) : '') + '</p>' + (item.media_type === 'document' ? '<p>' + esc(publisherTypeLabel(item.publisher_type)) + '</p>' : '<p>' + esc(item.location_name || 'Location not provided') + '</p><p>' + locationLabel(item) + '</p>') + '</div></article>').join('') : '<p class="panel-empty">' + tr('noMatches') + '</p>';
   renderLatestEvidence();
   list.querySelectorAll('.evidence-card').forEach((card) => card.addEventListener('click', () => {
@@ -451,8 +461,7 @@ function renderEvidencePanel() {
     const marker = markers.get(item.id);
     document.querySelectorAll('.evidence-card.selected').forEach((el) => el.classList.remove('selected'));
     card.classList.add('selected');
-    if (marker) map.flyTo([item.lat, item.lng], Math.max(map.getZoom(), 13), { duration: .6 });
-    openDetailPanel(item);
+    focusEvidence(item);
   }));
 }
 
@@ -520,15 +529,22 @@ function renderLatestEvidence() {
     return matchesType && matchesSearch(item) && matchesTimeline(item);
   }).sort(compareEvidence).slice(0, panelQuery ? 10 : 5);
   list.innerHTML = latest.map((item) => '<button class="latest-card" type="button" data-evidence-id="' + item.id + '">' +
-    (item.thumbnailUrl ? '<img src="' + esc(item.thumbnailUrl) + '" alt="">' : '<span class="latest-placeholder">' + (item.media_type === 'video' ? '🎥' : item.media_type === 'document' ? '📄' : '📷') + '</span>') +
+    latestThumbnail(item) +
     '<strong>' + esc(shorten(item.title || 'Untitled evidence', 42)) + '</strong><small>' + esc(item.captured_at || tr('noDate')) + '</small></button>').join('');
-  list.querySelectorAll('.latest-card').forEach((card) => card.addEventListener('click', () => {
+  list.onclick = (event) => {
+    const card = event.target.closest('.latest-card');
+    if (!card) return;
+    event.preventDefault();
     const item = itemsById.get(Number(card.dataset.evidenceId));
     if (!item) return;
-    const marker = markers.get(item.id);
-    if (marker) map.flyTo([item.lat, item.lng], Math.max(map.getZoom(), 13), { duration: .6 });
-    openDetailPanel(item);
-  }));
+    focusEvidence(item);
+  };
+}
+
+function focusEvidence(item) {
+  const marker = markers.get(item.id);
+  if (marker) map.flyTo([item.lat, item.lng], Math.max(map.getZoom(), 13), { duration: .6 });
+  openDetailPanel(item);
 }
 
 function openDetailPanel(item) {
