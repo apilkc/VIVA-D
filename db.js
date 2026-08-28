@@ -50,6 +50,8 @@ db.exec(`
     mime_type      TEXT    NOT NULL DEFAULT '',
     file_size      INTEGER NOT NULL DEFAULT 0,
     thumbnail_url  TEXT    NOT NULL DEFAULT '',
+    community_notes TEXT   NOT NULL DEFAULT '',
+    metadata_history TEXT  NOT NULL DEFAULT '[]',
     media_type     TEXT    NOT NULL CHECK (media_type IN ('photo','video','document')),
     title          TEXT    NOT NULL,
     description    TEXT    NOT NULL DEFAULT '',
@@ -79,6 +81,8 @@ const migrations = [
   ['mime_type', "ALTER TABLE media ADD COLUMN mime_type TEXT NOT NULL DEFAULT ''"],
   ['file_size', "ALTER TABLE media ADD COLUMN file_size INTEGER NOT NULL DEFAULT 0"],
   ['thumbnail_url', "ALTER TABLE media ADD COLUMN thumbnail_url TEXT NOT NULL DEFAULT ''"],
+  ['community_notes', "ALTER TABLE media ADD COLUMN community_notes TEXT NOT NULL DEFAULT ''"],
+  ['metadata_history', "ALTER TABLE media ADD COLUMN metadata_history TEXT NOT NULL DEFAULT '[]'"],
   ['downvotes', "ALTER TABLE media ADD COLUMN downvotes INTEGER NOT NULL DEFAULT 0"],
   ['location_source', "ALTER TABLE media ADD COLUMN location_source TEXT NOT NULL DEFAULT 'User-set'"],
 ];
@@ -93,11 +97,11 @@ const getStmt = db.prepare('SELECT * FROM media WHERE id = ?');
 const insertStmt = db.prepare(`
   INSERT INTO media (
     drive_url, drive_file_id, storage_type, source_url, document_source_url, publisher_type, source_platform, source_post_id,
-    original_filename, mime_type, file_size, thumbnail_url, media_type, title, description, location_name,
+    original_filename, mime_type, file_size, thumbnail_url, community_notes, metadata_history, media_type, title, description, location_name,
     lat, lng, captured_at, taken_by, owner, contact, location_source, acknowledged, submitted_at, status
   ) VALUES (
     @drive_url, @drive_file_id, @storage_type, @source_url, @document_source_url, @publisher_type, @source_platform, @source_post_id,
-    @original_filename, @mime_type, @file_size, @thumbnail_url, @media_type, @title, @description, @location_name,
+    @original_filename, @mime_type, @file_size, @thumbnail_url, @community_notes, @metadata_history, @media_type, @title, @description, @location_name,
     @lat, @lng, @captured_at, @taken_by, @owner, @contact, @location_source, @acknowledged, @submitted_at, @status
   )
 `);
@@ -110,6 +114,13 @@ const updateStmt = db.prepare(`
     mime_type = @mime_type,
     file_size = @file_size,
     thumbnail_url = @thumbnail_url,
+    community_notes = @community_notes,
+    metadata_history = @metadata_history,
+    title = @title,
+    location_name = @location_name,
+    lat = @lat,
+    lng = @lng,
+    location_source = @location_source,
     media_type = @media_type,
     status = @status
   WHERE id = @id
@@ -128,7 +139,7 @@ function getItem(id) {
 }
 
 function createItem(data) {
-  const info = insertStmt.run({ ...data, status: data.status || 'published' });
+  const info = insertStmt.run({ community_notes: '', metadata_history: '[]', ...data, status: data.status || 'published' });
   return getItem(info.lastInsertRowid);
 }
 

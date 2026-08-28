@@ -712,8 +712,33 @@ function detailHtml(item) {
   if (downvotes > 0) rows.push(['Community feedback', downvotes + ' downvote' + (downvotes === 1 ? '' : 's')]);
   const meta = rows.map(([key, value]) => '<tr><td>' + key + '</td><td>' + value + '</td></tr>').join('');
   const descBlock = item.description ? '<div class="detail-desc"><h3>' + (item.media_type === 'document' ? 'Brief note' : 'What happened') + '</h3><p>' + esc(item.description) + '</p></div>' : '';
+  const notesBlock = item.community_notes ? '<div class="detail-desc"><h3>Community / research notes</h3><p>' + esc(item.community_notes).replace(/\n/g, '<br>') + '</p></div>' : '';
   const detailType = item.media_type === 'photo' ? 'Photo' : item.media_type === 'video' ? 'Video' : 'Document';
-  return '<h3 class="detail-title">' + esc(item.title) + '</h3><span class="detail-badge">' + detailType + '</span>' + mediaThumb(item, false) + descBlock + '<table class="meta-table"><tbody>' + meta + '</tbody></table><div class="detail-actions"><a class="btn-primary" href="' + esc(item.previewUrl || item.drive_url) + '" target="_blank" rel="noopener noreferrer">Open archived media ↗</a><button class="btn-downvote-detail" type="button" onclick="downvoteItem(' + item.id + ')" title="Flag as inaccurate">👎 Flag as inaccurate</button></div><p class="verify-note">The archived copy is the primary evidence record. The original social link is preserved separately as provenance. Items flagged by 50+ community members are automatically hidden.</p>';
+  return '<h3 class="detail-title">' + esc(item.title) + '</h3><span class="detail-badge">' + detailType + '</span>' + mediaThumb(item, false) + descBlock + notesBlock + '<table class="meta-table"><tbody>' + meta + '</tbody></table><div class="detail-actions"><a class="btn-primary" href="' + esc(item.previewUrl || item.drive_url) + '" target="_blank" rel="noopener noreferrer">Open archived media ↗</a><button class="btn-secondary btn-sm" type="button" onclick="openMetadataUpdate(' + item.id + ')">Update metadata</button><button class="btn-downvote-detail" type="button" onclick="downvoteItem(' + item.id + ')" title="Flag as inaccurate">👎 Flag as inaccurate</button></div><p class="verify-note">The archived copy is the primary evidence record. The original social link is preserved separately as provenance. Items flagged by 50+ community members are automatically hidden.</p>';
+}
+
+let metadataUpdateId = null;
+window.openMetadataUpdate = function openMetadataUpdate(id) {
+  const item = getEvidenceItem(id); if (!item) return;
+  metadataUpdateId = item.id;
+  $('#metadataTitleInput').value = item.title || '';
+  $('#metadataLocationName').value = item.location_name || '';
+  $('#metadataLat').value = item.lat ?? '';
+  $('#metadataLng').value = item.lng ?? '';
+  $('#metadataNote').value = '';
+  $('#metadataConfirmed').checked = false;
+  $('#documentTitleUpdate').classList.toggle('hidden', item.media_type !== 'document');
+  $('#locationUpdate').classList.toggle('hidden', item.media_type === 'document');
+  openModal('metadataUpdateModal');
+};
+
+async function submitMetadataUpdate(event) {
+  event.preventDefault();
+  if (metadataUpdateId == null) return;
+  const res = await fetch('/api/items/' + metadataUpdateId + '/metadata', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: $('#metadataTitleInput').value, location_name: $('#metadataLocationName').value, lat: $('#metadataLat').value, lng: $('#metadataLng').value, note: $('#metadataNote').value, confirmed: $('#metadataConfirmed').checked }) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { toast(data.error || 'Could not save this update.'); return; }
+  addItem(data.item); openDetailPanel(data.item); closeModal('metadataUpdateModal'); toast('Metadata update saved with history.');
 }
 
 function publisherTypeLabel(value) {
@@ -1189,6 +1214,7 @@ $('#aboutArchiveLink').addEventListener('click', (e) => { e.preventDefault(); op
 $('#metadataSheetBtn')?.addEventListener('click', openMetadataSheet);
 $('#panelMetadataBtn').addEventListener('click', openMetadataSheet);
 $('#detailCloseBtn').addEventListener('click', closeDetailPanel);
+$('#metadataUpdateForm').addEventListener('submit', submitMetadataUpdate);
 $('#sortEvidence').addEventListener('change', (e) => { panelSort = e.target.value; renderEvidencePanel(); });
 $('#timelineRange').addEventListener('input', (e) => {
   const index = Number(e.target.value);

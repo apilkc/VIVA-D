@@ -63,6 +63,8 @@ function serialize(item) {
     contact: item.contact,
     location_source: item.location_source || '',
     submitted_at: item.submitted_at,
+    community_notes: item.community_notes || '',
+    metadata_history: item.metadata_history || '[]',
     thumbnailUrl: item.thumbnail_url || (isGcs && isImageFile ? driveUrl : (!isGcs && driveFileId ? thumbnailUrl(driveFileId) : null)),
     previewUrl,
   };
@@ -385,6 +387,38 @@ app.post('/api/items/:id/downvote', async (req, res, next) => {
     const item = await db.downvoteItem(id);
     if (!item) return res.status(404).json({ error: 'Not found.' });
     res.json({ item: serialize(item), message: item.downvotes >= db.DOWNVOTE_THRESHOLD ? 'This item has been hidden due to community feedback.' : 'Thank you for your feedback.' });
+  } catch (error) { next(error); }
+});
+
+const METADATA_UPDATE_LIMIT = rateLimit({ windowMs: 60 * 60 * 1000, limit: 15, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many metadata updates. Please try again later.' } });
+app.post('/api/items/:id/metadata', METADATA_UPDATE_LIMIT, async (req, res, next) => {
+  const id = Number(req.params.id);
+  try {
+    const item = Number.isInteger(id) && id > 0 ? await db.getItem(id) : null;
+    if (!item) return res.status(404).json({ error: 'Evidence was not found.' });
+    const body = req.body || {};
+    if (body.confirmed !== true) return res.status(400).json({ error: 'Please confirm that this update is accurate.' });
+    const title = typeof body.title === 'string' ? body.title.trim().slice(0, 200) : '';
+    const note = typeof body.note === 'string' ? body.note.trim().slice(0, 2000) : '';
+    const locationName = typeof body.location_name === 'string' ? body.location_name.trim().slice(0, 200) : '';
+    const lat = Number(body.lat); const lng = Number(body.lng);
+    const changes = {};
+    const updates = {};
+    if (item.media_type === 'document' && title && title !== item.title) { changes.title = { from: item.title, to: title }; updates.title = title; }
+    if (note) { changes.community_note = note; updates.community_notes = [item.community_notes, `[${new Date().toISOString()}] ${note}`].filter(Boolean).join('\n\n'); }
+    if (item.media_type !== 'document' && Number.isFinite(lat) && Number.isFinite(lng) && lat >= BOUNDS.latMin && lat <= BOUNDS.latMax && lng >= BOUNDS.lngMin && lng <= BOUNDS.lngMax) {
+      if (lat !== Number(item.lat) || lng !== Number(item.lng) || locationName !== item.location_name) {
+        changes.location = { from: { name: item.location_name, lat: item.lat, lng: item.lng }, to: { name: locationName || item.location_name, lat, lng } };
+        Object.assign(updates, { lat, lng, location_name: locationName || item.location_name, location_source: 'Community update' });
+      }
+    }
+    if (!Object.keys(changes).length) return res.status(400).json({ error: 'Add a note or change a supported field before submitting.' });
+    let history = []; try { history = JSON.parse(item.metadata_history || '[]'); } catch { history = []; }
+    history.push({ at: new Date().toISOString(), changes });
+    updates.metadata_history = JSON.stringify(history.slice(-100));
+    const updated = await db.updateItem(id, updates);
+    if (updated) await archiveMetadataCopies(updated, await db.listAllItems());
+    res.json({ item: serialize(updated) });
   } catch (error) { next(error); }
 });
 

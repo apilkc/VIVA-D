@@ -224,6 +224,20 @@
     </div>
   </div>
 
+  <div id="metadataUpdateModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="metadataUpdateTitle">
+    <div class="modal-card metadata-update-card">
+      <div class="modal-head"><h2 id="metadataUpdateTitle">Update archive metadata</h2><button class="modal-x" type="button" data-close="metadataUpdateModal" aria-label="Close">✕</button></div>
+      <form id="metadataUpdateForm">
+        <p class="how-note">Updates are public. The archive keeps the previous value in its change history.</p>
+        <div id="documentTitleUpdate" class="form-section"><label for="metadataTitleInput">Document display title</label><input id="metadataTitleInput" maxlength="200"><small>The original uploaded filename remains in the metadata.</small></div>
+        <div id="locationUpdate" class="form-section"><label for="metadataLocationName">Corrected place name</label><input id="metadataLocationName" maxlength="200"><div class="inline-row"><input id="metadataLat" type="number" step="any" placeholder="Latitude"><input id="metadataLng" type="number" step="any" placeholder="Longitude"></div><small>Enter corrected map coordinates in Nepal. The previous location is preserved.</small></div>
+        <div class="form-section"><label for="metadataNote">Community / research note</label><textarea id="metadataNote" maxlength="2000" placeholder="Add context, a correction, source link, or research observation."></textarea></div>
+        <label class="ack"><input id="metadataConfirmed" type="checkbox"><span>I confirm this update is accurate and may be shown publicly.</span></label>
+        <div class="step-actions"><button class="btn-ghost" type="button" data-close="metadataUpdateModal">Cancel</button><button class="btn-primary" type="submit">Save update</button></div>
+      </form>
+    </div>
+  </div>
+
   <div id="metadataModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="metadataTitle">
     <div class="modal-card metadata-card">
       <div class="modal-head"><h2 id="metadataTitle">Compiled metadata sheet</h2><div class="modal-head-actions"><button class="btn-secondary btn-sm" id="downloadMetadataBtn" type="button">⇩ Download CSV</button><button class="modal-x" type="button" data-close="metadataModal" aria-label="Close">✕</button></div></div>
