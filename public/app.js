@@ -718,17 +718,35 @@ function detailHtml(item) {
 }
 
 let metadataUpdateId = null;
+let metadataLocationMap = null;
+let metadataLocationPin = null;
+function setMetadataLocation(latlng) {
+  $('#metadataLat').value = Number(latlng.lat).toFixed(6);
+  $('#metadataLng').value = Number(latlng.lng).toFixed(6);
+}
+function setupMetadataLocationMap(item) {
+  const latlng = L.latLng(item.lat, item.lng);
+  if (!metadataLocationMap) {
+    metadataLocationMap = L.map('metadataLocationMap', { attributionControl: false, zoomControl: true });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(metadataLocationMap);
+    metadataLocationMap.on('click', (event) => { metadataLocationPin.setLatLng(event.latlng); setMetadataLocation(event.latlng); });
+    metadataLocationPin = L.marker(latlng, { draggable: true }).addTo(metadataLocationMap);
+    metadataLocationPin.on('dragend', () => setMetadataLocation(metadataLocationPin.getLatLng()));
+  } else metadataLocationPin.setLatLng(latlng);
+  metadataLocationMap.setView(latlng, 13);
+  setMetadataLocation(latlng);
+  setTimeout(() => metadataLocationMap.invalidateSize(), 100);
+}
 window.openMetadataUpdate = function openMetadataUpdate(id) {
   const item = getEvidenceItem(id); if (!item) return;
   metadataUpdateId = item.id;
   $('#metadataTitleInput').value = item.title || '';
   $('#metadataLocationName').value = item.location_name || '';
-  $('#metadataLat').value = item.lat ?? '';
-  $('#metadataLng').value = item.lng ?? '';
   $('#metadataNote').value = '';
   $('#metadataConfirmed').checked = false;
-  $('#documentTitleUpdate').classList.toggle('hidden', item.media_type !== 'document');
+  $('#documentTitleUpdate').classList.remove('hidden');
   $('#locationUpdate').classList.toggle('hidden', item.media_type === 'document');
+  if (item.media_type !== 'document') setupMetadataLocationMap(item);
   openModal('metadataUpdateModal');
 };
 

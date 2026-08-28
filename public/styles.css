@@ -623,6 +623,7 @@ textarea { min-height: 96px; resize: vertical; }
 .detail-actions .btn-secondary { margin: 8px 8px 0 0; }
 .metadata-update-card { max-width: 560px; }
 .metadata-update-card small { display:block; color:var(--muted); margin-top:5px; font-size:.8rem; }
+.metadata-location-map { height:220px; border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-top:8px; }
 .verify-note { margin-top: 14px; color: var(--muted); font-size: 0.88rem; line-height: 1.5; }
 
 /* ---------- how it works ---------- */

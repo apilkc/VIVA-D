@@ -7,7 +7,7 @@
   <meta name="description" content="VIVA-D is an open collection of geotagged photographs and videos documenting natural-disaster impacts, initially focused on floods and landslides, to support research, assessment, and resilience.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗺️</text></svg>">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="styles.css?v=20260828-2">
+  <link rel="stylesheet" href="styles.css?v=20260828-3">
 </head>
 <body>
 
@@ -229,8 +229,8 @@
       <div class="modal-head"><h2 id="metadataUpdateTitle">Update archive metadata</h2><button class="modal-x" type="button" data-close="metadataUpdateModal" aria-label="Close">✕</button></div>
       <form id="metadataUpdateForm">
         <p class="how-note">Updates are public. The archive keeps the previous value in its change history.</p>
-        <div id="documentTitleUpdate" class="form-section"><label for="metadataTitleInput">Document display title</label><input id="metadataTitleInput" maxlength="200"><small>The original uploaded filename remains in the metadata.</small></div>
-        <div id="locationUpdate" class="form-section"><label for="metadataLocationName">Corrected place name</label><input id="metadataLocationName" maxlength="200"><div class="inline-row"><input id="metadataLat" type="number" step="any" placeholder="Latitude"><input id="metadataLng" type="number" step="any" placeholder="Longitude"></div><small>Enter corrected map coordinates in Nepal. The previous location is preserved.</small></div>
+        <div id="documentTitleUpdate" class="form-section"><label for="metadataTitleInput">Public evidence title</label><input id="metadataTitleInput" maxlength="200"><small>The original uploaded filename remains in the metadata.</small></div>
+        <div id="locationUpdate" class="form-section"><label for="metadataLocationName">Corrected place name</label><input id="metadataLocationName" maxlength="200"><div id="metadataLocationMap" class="metadata-location-map" aria-label="Correct evidence location"></div><div class="inline-row"><input id="metadataLat" type="number" step="any" placeholder="Latitude" readonly><input id="metadataLng" type="number" step="any" placeholder="Longitude" readonly></div><small>Click the map or drag the pin to correct the location. The previous location is preserved.</small></div>
         <div class="form-section"><label for="metadataNote">Community / research note</label><textarea id="metadataNote" maxlength="2000" placeholder="Add context, a correction, source link, or research observation."></textarea></div>
         <label class="ack"><input id="metadataConfirmed" type="checkbox"><span>I confirm this update is accurate and may be shown publicly.</span></label>
         <div class="step-actions"><button class="btn-ghost" type="button" data-close="metadataUpdateModal">Cancel</button><button class="btn-primary" type="submit">Save update</button></div>
@@ -266,6 +266,6 @@
   <div id="toast" class="toast hidden" role="status"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="app.js?v=20260828-2"></script>
+  <script src="app.js?v=20260828-3"></script>
 </body>
 </html>

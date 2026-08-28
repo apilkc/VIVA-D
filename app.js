@@ -404,7 +404,7 @@ app.post('/api/items/:id/metadata', METADATA_UPDATE_LIMIT, async (req, res, next
     const lat = Number(body.lat); const lng = Number(body.lng);
     const changes = {};
     const updates = {};
-    if (item.media_type === 'document' && title && title !== item.title) { changes.title = { from: item.title, to: title }; updates.title = title; }
+    if (title && title !== item.title) { changes.title = { from: item.title, to: title }; updates.title = title; }
     if (note) { changes.community_note = note; updates.community_notes = [item.community_notes, `[${new Date().toISOString()}] ${note}`].filter(Boolean).join('\n\n'); }
     if (item.media_type !== 'document' && Number.isFinite(lat) && Number.isFinite(lng) && lat >= BOUNDS.latMin && lat <= BOUNDS.latMax && lng >= BOUNDS.lngMin && lng <= BOUNDS.lngMax) {
       if (lat !== Number(item.lat) || lng !== Number(item.lng) || locationName !== item.location_name) {
