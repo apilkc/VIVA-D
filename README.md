@@ -2,19 +2,41 @@
 
 VIVA-D is an open collection of geotagged photographs and videos documenting the impacts of natural disasters, with an initial focus on floods and landslides. It provides organized visual data and associated metadata to support disaster reconnaissance, research, assessment, and resilience efforts.
 
+**Live archive:** [archive.rasuwaflood.org](https://archive.rasuwaflood.org/)
+
 ## Rasuwa Flood Evidence Map
 
-A public web platform for documenting the **August 26, 2026 flash flood** on the
-Bhote Koshi river in Nepal's Rasuwa district (Timure, Syaphrubesi and the areas
-between). Anyone can add a photo or video with its metadata — who took it, when,
-where exactly, who owns it, contact details, and what it shows. Every item
-appears instantly on a big map as a clickable marker with the archived media
-stored in the project's Google Drive folder. If the media came from Facebook,
-X, or Twitter, the original social URL is preserved separately as provenance.
+A public web platform documenting the **August 2026 floods and landslides**
+affecting Rasuwa, Nuwakot, Dhading, and surrounding areas in Nepal. People have
+shared important images and videos of damaged roads and bridges, river
+conditions, landslides, homes, recovery work, and the realities communities are
+facing. These records are usually scattered across platforms, can be difficult
+to find later, and may disappear over time.
 
-**By design:** anyone can upload, but **no one — not even an admin — can delete
-or edit** an item. The data is an immutable record for research and
-verification.
+VIVA-D brings this evidence and its basic metadata together in one public,
+searchable place. It is intended to help communities, researchers, journalists,
+response teams, and recovery planning take a more evidence-based approach.
+Having supported early response after the 2015 Gorkha earthquake, the creator
+recognizes the seriousness of this disaster and the importance of preserving
+evidence with care and humility.
+
+Anyone can contribute permitted material. Public photos, videos, and documents
+are archived in cloud storage and shown on the map with their available
+metadata. For public social-media imports, the original Facebook, X/Twitter,
+Instagram, or TikTok link is retained as provenance.
+
+### Principles and contributor guidance
+
+- **Open source:** The code is available at [github.com/apilkc/VIVA-D](https://github.com/apilkc/VIVA-D).
+- **Public data:** Evidence and metadata submitted to this archive are public and openly shared.
+- **Research value:** The archive is a practical step toward evidence-based disaster research, response, and recovery.
+- **No AI-generated media:** Do not upload AI-generated, altered, or synthetic images or videos as disaster evidence.
+- **Safety and privacy:** Upload only material you have permission to share, and avoid exposing people to harm through sensitive or identifying information.
+- **Feedback welcome:** This is a growing, vibe-coded project and may have limitations or security issues. Suggestions and corrections are welcome; changes should be made carefully so they do not introduce new risks.
+
+The archive preserves a history of confirmed public metadata corrections, while
+retaining the original filename and earlier location values for research
+traceability. Evidence itself cannot be deleted through the public interface.
 
 ---
 
@@ -43,9 +65,9 @@ screen (`rasuwastorage@project-da957902-2b51-4bce-80f.iam.gserviceaccount.com`)
 can be used. A screenshot or email address is not an authentication credential:
 you must download its JSON key from Google Cloud and keep that key private.
 
-Requirements: Node.js 18+ (tested on Node 24). Data is stored in a single
-SQLite file at `data/media.db`, created automatically on first run. Direct
-uploads require the Google Drive setup below; the public map can still run
+Requirements: Node.js 18+ (tested on Node 24). Local development and tests use
+SQLite; production uses Railway PostgreSQL when `DATABASE_URL` is configured.
+Direct uploads require cloud-storage configuration; the public map can still run
 without it.
 
 ---
@@ -56,16 +78,17 @@ without it.
 2. 📷 markers are photos, 🎥 markers are videos. Click one to see the archived
    thumbnail, a summary, and an **"Open archived media"** button; click
    **"More details"** for the full metadata.
-3. When a source URL was provided, the original Facebook, X, or Twitter post
+3. When a source URL was provided, the original Facebook, X/Twitter, Instagram,
+   or TikTok post
    appears as a separate provenance link.
 
 ## How to add evidence
 
 1. Click **"＋ Add evidence"** and select the original photo or video from your
-   device. The server archives the file in the configured Google Drive folder;
+   device. The server archives the file in configured cloud storage;
    the visitor-facing record uses that archived copy, not a pasted Drive URL.
-2. If the media came from Facebook, X, or Twitter, paste the original public
-   post URL in **"Original Facebook, X, or Twitter post"**. This is stored as
+2. If the media came from Facebook, X/Twitter, Instagram, or TikTok, paste the
+   original public post URL. This is stored as
    provenance, separately from the archived media.
 3. Choose Photo or Video, then click the mini-map (or use **"Use my location"**)
    to drop the pin at the exact spot. The place name is filled in automatically
@@ -74,14 +97,14 @@ without it.
    optional public contact, and a description.
 5. Tick **"I confirm this is authentic"** — this is required.
 6. Click **"Archive and publish"**. The item appears immediately after the
-   Google Drive upload succeeds.
+   cloud-storage upload succeeds.
 
 ### Social-media source links
 
-The app records Facebook/X/Twitter URLs and extracts their platform and post ID.
-When the Google Drive archive is configured, a source-only submission uses the
-bundled `yt-dlp` downloader to fetch one public media item, then archives that
-file in Drive. It does **not** bypass login walls, private posts, or platform
+The app records Facebook/X/Twitter/Instagram/TikTok URLs and extracts their
+platform and post ID. When cloud storage is configured, a source-only submission
+uses the bundled `yt-dlp` downloader to fetch one public media item, then
+archives that file. It does **not** bypass login walls, private posts, or platform
 access controls. If a post is unsupported or restricted, download the media
 through the platform's permitted tools and use the local-file option instead.
 The downloader must be able to access the post without a browser login or
@@ -103,9 +126,9 @@ server-side downloading.
 
 - Multipart requests use the `media` file field and accept one image or video up to 250 MB.
 - A submission must contain exactly one source: a local `media` file or a social `source_url`.
-- Social URL imports require Google Drive OAuth configuration, Python 3.10+, FFmpeg for video merging, and a public post supported by the bundled `yt-dlp`. The server downloads one item, up to 250 MB, then archives it in Drive.
+- Social URL imports require cloud-storage configuration, Python 3.10+, FFmpeg for video merging, and a public post supported by the bundled `yt-dlp`. The server downloads one item, up to 250 MB, then archives it.
 - JSON requests with `drive_url` remain supported for legacy records.
-- Optional `source_url` must be a Facebook, X, or Twitter post link; the server stores its platform and post ID.
+- Optional `source_url` must be a public Facebook, X/Twitter, Instagram, or TikTok post link; the server stores its platform and post ID.
 - `media_type` must be `photo` or `video`.
 - `title` is required (max 200 chars); other fields optional with length caps.
 - `lat`/`lng` must be numbers within Nepal's bounds.
@@ -130,17 +153,19 @@ future moderation queue — everything is `published` today).
 ```
 server.js        entry point (starts the HTTP server)
 app.js           Express app: API routes, validation, rate limiting
-db.js            SQLite schema + data access
+database.js       selects SQLite locally or PostgreSQL in production
+db.js             SQLite schema + data access (local development/tests)
+postgres-db.js    PostgreSQL schema + data access (Railway production)
 drive.js         Google Drive link parsing + thumbnail URL builder
 drive-storage.js Google Drive OAuth upload helper
-social.js        Facebook/X/Twitter provenance URL parsing
+social.js        social-media provenance URL parsing
 scripts/         one-time Drive OAuth and folder helper scripts
 public/          frontend (no build step)
   index.html     page: header, map, modals
   styles.css     big-screen, readable design
   app.js         map, markers/popups, upload wizard, detail view
 test/            node:test suites (drive parsing + API behaviour)
-data/            SQLite database (created at runtime, gitignored)
+data/            SQLite database (local development, gitignored)
 ```
 
 ---
