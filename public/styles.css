@@ -132,6 +132,9 @@ body {
 .latest-placeholder { color:var(--muted); font-size:1.1rem; }
 .latest-card strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.73rem; line-height:1.25; }
 .latest-card small { color:var(--muted); font-size:.68rem; margin-top:3px; }
+.panel-about .support-disaster { margin:12px 0 8px; font-size:.79rem; font-weight:700; line-height:1.4; }
+.support-disaster a { color:var(--primary-dark); text-decoration:none; }
+.support-disaster a:hover { text-decoration:underline; }
 
 .evidence-panel { position:absolute; top:0; left:0; bottom:34px; width:var(--evidence-panel-width); min-width:250px; max-width:320px; z-index:850; background:rgba(255,255,255,.97); border-right:1px solid var(--border); display:flex; flex-direction:column; transition:width .2s ease, min-width .2s ease; }
 .drawer-handle { display:none; }
