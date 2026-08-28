@@ -49,6 +49,7 @@ db.exec(`
     original_filename TEXT  NOT NULL DEFAULT '',
     mime_type      TEXT    NOT NULL DEFAULT '',
     file_size      INTEGER NOT NULL DEFAULT 0,
+    thumbnail_url  TEXT    NOT NULL DEFAULT '',
     media_type     TEXT    NOT NULL CHECK (media_type IN ('photo','video','document')),
     title          TEXT    NOT NULL,
     description    TEXT    NOT NULL DEFAULT '',
@@ -77,6 +78,7 @@ const migrations = [
   ['original_filename', "ALTER TABLE media ADD COLUMN original_filename TEXT NOT NULL DEFAULT ''"],
   ['mime_type', "ALTER TABLE media ADD COLUMN mime_type TEXT NOT NULL DEFAULT ''"],
   ['file_size', "ALTER TABLE media ADD COLUMN file_size INTEGER NOT NULL DEFAULT 0"],
+  ['thumbnail_url', "ALTER TABLE media ADD COLUMN thumbnail_url TEXT NOT NULL DEFAULT ''"],
   ['downvotes', "ALTER TABLE media ADD COLUMN downvotes INTEGER NOT NULL DEFAULT 0"],
   ['location_source', "ALTER TABLE media ADD COLUMN location_source TEXT NOT NULL DEFAULT 'User-set'"],
 ];
@@ -91,11 +93,11 @@ const getStmt = db.prepare('SELECT * FROM media WHERE id = ?');
 const insertStmt = db.prepare(`
   INSERT INTO media (
     drive_url, drive_file_id, storage_type, source_url, document_source_url, publisher_type, source_platform, source_post_id,
-    original_filename, mime_type, file_size, media_type, title, description, location_name,
+    original_filename, mime_type, file_size, thumbnail_url, media_type, title, description, location_name,
     lat, lng, captured_at, taken_by, owner, contact, location_source, acknowledged, submitted_at, status
   ) VALUES (
     @drive_url, @drive_file_id, @storage_type, @source_url, @document_source_url, @publisher_type, @source_platform, @source_post_id,
-    @original_filename, @mime_type, @file_size, @media_type, @title, @description, @location_name,
+    @original_filename, @mime_type, @file_size, @thumbnail_url, @media_type, @title, @description, @location_name,
     @lat, @lng, @captured_at, @taken_by, @owner, @contact, @location_source, @acknowledged, @submitted_at, @status
   )
 `);
@@ -107,6 +109,7 @@ const updateStmt = db.prepare(`
     original_filename = @original_filename,
     mime_type = @mime_type,
     file_size = @file_size,
+    thumbnail_url = @thumbnail_url,
     media_type = @media_type,
     status = @status
   WHERE id = @id
@@ -130,7 +133,9 @@ function createItem(data) {
 }
 
 function updateItem(id, fields) {
-  updateStmt.run({ ...fields, id });
+  const current = getItem(id);
+  if (!current) return null;
+  updateStmt.run({ ...current, ...fields, id });
   return getItem(id);
 }
 

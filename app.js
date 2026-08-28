@@ -12,8 +12,9 @@ const db = require('./database');
 const { listAllItems } = db;
 const { parseDriveLink, thumbnailUrl } = require('./drive');
 const { parseSocialLink } = require('./social');
-const { getDriveConfig, uploadToDrive, archiveMetadataCopies } = require('./drive-storage');
+const { getDriveConfig, uploadToDrive, downloadFromGcs, archiveMetadataCopies } = require('./drive-storage');
 const { downloadSocialMedia, cleanupDownloadedMedia, extractSocialMetadata } = require('./social-download');
+const { createVideoThumbnail, removeFile: removeThumbnailFile } = require('./media-thumbnail');
 
 const app = express();
 app.disable('x-powered-by');
@@ -62,7 +63,7 @@ function serialize(item) {
     contact: item.contact,
     location_source: item.location_source || '',
     submitted_at: item.submitted_at,
-    thumbnailUrl: isGcs && isImageFile ? driveUrl : (!isGcs && driveFileId ? thumbnailUrl(driveFileId) : null),
+    thumbnailUrl: item.thumbnail_url || (isGcs && isImageFile ? driveUrl : (!isGcs && driveFileId ? thumbnailUrl(driveFileId) : null)),
     previewUrl,
   };
 }
@@ -214,6 +215,52 @@ function removeTemporaryFile(file) {
   }
 }
 
+async function archiveVideoThumbnail(filepath, filename) {
+  let thumbnailPath = '';
+  try {
+    thumbnailPath = await createVideoThumbnail(filepath);
+    const result = await uploadToDrive({
+      filepath: thumbnailPath,
+      filename: path.basename(filename, path.extname(filename)) + '-thumbnail.jpg',
+      mimeType: 'image/jpeg',
+      folderKey: 'thumbnail',
+    });
+    return result.driveUrl;
+  } catch (error) {
+    // The archive itself remains valid if a source video has no decodable frame.
+    console.warn('Video thumbnail could not be created:', error.message);
+    return '';
+  } finally {
+    removeThumbnailFile(thumbnailPath);
+  }
+}
+
+const thumbnailJobs = new Set();
+function scheduleMissingVideoThumbnail(item) {
+  const isGcsVideo = item.storage_type === 'gcs'
+    && /^video\//i.test(item.mime_type || '')
+    && item.drive_file_id
+    && !item.thumbnail_url;
+  if (!isGcsVideo || thumbnailJobs.has(item.id)) return;
+  thumbnailJobs.add(item.id);
+  setImmediate(async () => {
+    const extension = path.extname(item.original_filename || '') || '.mp4';
+    const tempVideoPath = path.join(os.tmpdir(), `viva-d-backfill-${item.id}-${crypto.randomUUID()}${extension}`);
+    try {
+      await downloadFromGcs({ fileId: item.drive_file_id, filepath: tempVideoPath });
+      const thumbnailUrl = await archiveVideoThumbnail(tempVideoPath, item.original_filename || `evidence-${item.id}${extension}`);
+      if (!thumbnailUrl) return;
+      const updated = await db.updateItem(item.id, { thumbnail_url: thumbnailUrl });
+      if (updated) await archiveMetadataCopies(updated, await db.listAllItems());
+    } catch (error) {
+      console.warn(`Video thumbnail backfill failed for ${item.id}:`, error.message);
+    } finally {
+      removeThumbnailFile(tempVideoPath);
+      thumbnailJobs.delete(item.id);
+    }
+  });
+}
+
 /* ---------- routes ---------- */
 
 app.get('/api/config', (req, res) => {
@@ -313,7 +360,9 @@ app.get('/api/social-metadata', async (req, res) => {
 
 app.get('/api/items', async (req, res, next) => {
   try {
-    const items = (await (req.query.all === '1' ? db.listAllItems() : db.listItems())).map(serialize);
+    const records = await (req.query.all === '1' ? db.listAllItems() : db.listItems());
+    records.forEach(scheduleMissingVideoThumbnail);
+    const items = records.map(serialize);
     res.json({ items });
   } catch (error) { next(error); }
 });
@@ -349,6 +398,9 @@ async function processSocialImport(itemId, sourceUrl, mediaType) {
       mimeType: downloaded.mimeType,
       folderKey: 'download',
     });
+    const thumbnailUrl = /^video\//i.test(downloaded.mimeType || '')
+      ? await archiveVideoThumbnail(downloaded.filepath, downloaded.filename)
+      : '';
     const item = await db.updateItem(itemId, {
       drive_url: result.driveUrl,
       drive_file_id: result.fileId,
@@ -356,6 +408,7 @@ async function processSocialImport(itemId, sourceUrl, mediaType) {
       original_filename: result.filename,
       mime_type: result.mimeType,
       file_size: result.size,
+      thumbnail_url: thumbnailUrl,
       media_type: downloaded.mediaType,
       status: 'published',
     });
@@ -438,6 +491,7 @@ async function createItemHandler(req, res) {
       original_filename: '',
       mime_type: '',
       file_size: 0,
+      thumbnail_url: '',
       media_type: v.media_type || 'video',
       title: v.title,
       description: v.description,
@@ -465,6 +519,7 @@ async function createItemHandler(req, res) {
     original_filename: '',
     mime_type: '',
     file_size: 0,
+    thumbnail_url: '',
   };
 
   if (directUpload) {
@@ -487,6 +542,9 @@ async function createItemHandler(req, res) {
         mimeType: req.file.mimetype,
         folderKey,
       });
+      const thumbnailUrl = /^video\//i.test(req.file.mimetype || '')
+        ? await archiveVideoThumbnail(req.file.path, req.file.originalname)
+        : '';
       stored = {
         storage_type: result.driveUrl.startsWith('https://storage.googleapis.com/') ? 'gcs' : 'drive',
         drive_url: result.driveUrl,
@@ -494,6 +552,7 @@ async function createItemHandler(req, res) {
         original_filename: result.filename,
         mime_type: result.mimeType,
         file_size: result.size,
+        thumbnail_url: thumbnailUrl,
       };
     } catch (error) {
       if (error.code === 'DRIVE_NOT_CONFIGURED') {

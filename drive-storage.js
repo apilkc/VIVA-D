@@ -147,6 +147,19 @@ async function uploadToGcs({ filepath, filename, mimeType, folderKey = '' }) {
   };
 }
 
+async function downloadFromGcs({ fileId, filepath }) {
+  const { Storage } = require('@google-cloud/storage');
+  const gcsConfig = getGcsConfig();
+  if (!gcsConfig || !fileId) throw new Error('Google Cloud Storage is not configured.');
+  const credentials = gcsConfig.serviceAccount.keyFile ? undefined : {
+    client_email: gcsConfig.serviceAccount.clientEmail,
+    private_key: gcsConfig.serviceAccount.privateKey,
+  };
+  const storage = new Storage(gcsConfig.serviceAccount.keyFile ? { keyFilename: gcsConfig.serviceAccount.keyFile } : { credentials });
+  await storage.bucket(gcsConfig.bucket).file(fileId).download({ destination: filepath });
+  return filepath;
+}
+
 function metadataCsv(items) {
   const headers = ['id', 'title', 'media_type', 'captured_at', 'location_name', 'lat', 'lng', 'location_source', 'taken_by', 'owner', 'source_url', 'document_source_url', 'publisher_type', 'drive_url', 'submitted_at'];
   const cell = (value) => '"' + String(value ?? '').replace(/"/g, '""') + '"';
@@ -233,4 +246,4 @@ async function uploadToDrive({ filepath, filename, mimeType, folderKey = '' }) {
   };
 }
 
-module.exports = { getDriveConfig, createDriveClient, uploadToDrive, getFolderIds, getGcsConfig, uploadToGcs, archiveMetadataCopies };
+module.exports = { getDriveConfig, createDriveClient, uploadToDrive, getFolderIds, getGcsConfig, uploadToGcs, downloadFromGcs, archiveMetadataCopies };
