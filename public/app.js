@@ -528,17 +528,9 @@ function renderLatestEvidence() {
     const matchesType = panelFilter === 'all' || (panelFilter === 'social' ? Boolean(item.source_url) : item.media_type === panelFilter);
     return matchesType && matchesSearch(item) && matchesTimeline(item);
   }).sort(compareEvidence).slice(0, panelQuery ? 10 : 5);
-  list.innerHTML = latest.map((item) => '<button class="latest-card" type="button" data-evidence-id="' + item.id + '">' +
+  list.innerHTML = latest.map((item) => '<button class="latest-card" type="button" data-evidence-id="' + item.id + '" onclick="openEvidencePanel(' + item.id + ')">' +
     latestThumbnail(item) +
     '<strong>' + esc(shorten(item.title || 'Untitled evidence', 42)) + '</strong><small>' + esc(item.captured_at || tr('noDate')) + '</small></button>').join('');
-  list.onclick = (event) => {
-    const card = event.target.closest('.latest-card');
-    if (!card) return;
-    event.preventDefault();
-    const item = itemsById.get(Number(card.dataset.evidenceId));
-    if (!item) return;
-    focusEvidence(item);
-  };
 }
 
 function focusEvidence(item) {
@@ -546,6 +538,13 @@ function focusEvidence(item) {
   if (marker) map.flyTo([item.lat, item.lng], Math.max(map.getZoom(), 13), { duration: .6 });
   openDetailPanel(item);
 }
+
+// Kept on window because Latest evidence is rendered dynamically. Each card
+// calls this same action as a map marker, using its stored evidence ID.
+window.openEvidencePanel = function openEvidencePanel(id) {
+  const item = itemsById.get(Number(id));
+  if (item) focusEvidence(item);
+};
 
 function openDetailPanel(item) {
   $('#detailPanelBody').innerHTML = detailHtml(item);
