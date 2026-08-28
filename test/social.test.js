@@ -22,6 +22,17 @@ test('parses X and Twitter status links', () => {
   assert.equal(parseSocialLink('https://twitter.com/example/status/456').platform, 'x');
 });
 
+test('parses public Instagram posts and TikTok videos', () => {
+  assert.deepEqual(parseSocialLink('https://www.instagram.com/reel/C9aBcDeFgHi/'), {
+    platform: 'instagram',
+    postId: 'C9aBcDeFgHi',
+    url: 'https://www.instagram.com/reel/C9aBcDeFgHi/',
+  });
+  assert.equal(parseSocialLink('https://www.tiktok.com/@archive/video/7351234567890123456').platform, 'tiktok');
+  assert.equal(parseSocialLink('https://www.tiktok.com/@archive/video/7351234567890123456').postId, '7351234567890123456');
+  assert.equal(parseSocialLink('https://vm.tiktok.com/ZMabcdef/').platform, 'tiktok');
+});
+
 test('rejects unsupported or malformed source links', () => {
   assert.equal(parseSocialLink('https://youtube.com/watch?v=abc'), null);
   assert.equal(parseSocialLink('not a url'), null);

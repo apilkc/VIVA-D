@@ -7,7 +7,7 @@
   <meta name="description" content="VIVA-D is an open collection of geotagged photographs and videos documenting natural-disaster impacts, initially focused on floods and landslides, to support research, assessment, and resilience.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗺️</text></svg>">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="styles.css?v=20260828-6">
+  <link rel="stylesheet" href="styles.css?v=20260828-7">
 </head>
 <body>
 
@@ -95,7 +95,7 @@
         <fieldset id="ingestModeBlock" class="mode-row">
           <legend class="required" data-i18n="addingMedia">How are you adding this media?</legend>
           <label class="radio-card"><input type="radio" name="ingest_mode" id="modeUpload" value="upload" checked>📁 <span data-i18n="uploadDevice">Upload from this device</span></label>
-          <label class="radio-card"><input type="radio" name="ingest_mode" id="modeImport" value="import">🔗 <span data-i18n="importSocial">Import from Facebook, X, or Twitter</span></label>
+          <label class="radio-card"><input type="radio" name="ingest_mode" id="modeImport" value="import">🔗 <span data-i18n="importSocial">Import from Facebook, X, Instagram, or TikTok</span></label>
         </fieldset>
 
         <div id="uploadInputBlock">
@@ -112,8 +112,8 @@
         </div>
 
         <div id="importInputBlock" class="hidden">
-          <label class="required" for="sourceUrl" data-i18n="originalPost">Original Facebook, X, or Twitter post</label>
-          <input type="url" id="sourceUrl" name="source_url" placeholder="https://facebook.com/... or https://x.com/..." autocomplete="off">
+          <label class="required" for="sourceUrl" data-i18n="originalPost">Original Facebook, X, Instagram, or TikTok post</label>
+          <input type="url" id="sourceUrl" name="source_url" placeholder="https://instagram.com/... or https://tiktok.com/..." autocomplete="off">
           <p class="field-hint" data-i18n="importHint">The server will download the media from this post, archive it, and keep this link as the source.</p>
           <p id="sourceHint" class="source-hint hidden"></p>
         </div>
@@ -252,7 +252,7 @@
         <button class="modal-x" type="button" data-close="howModal" aria-label="Close">✕</button>
       </div>
       <ol class="how-list">
-        <li><strong>Add evidence</strong> — upload a photo, video, or document from your device, or paste a public Facebook / X / Twitter post link.</li>
+        <li><strong>Add evidence</strong> — upload a photo, video, or document from your device, or paste a public Facebook, X, Instagram, or TikTok post link.</li>
         <li><strong>Set the location</strong> — drop a pin on the map at the exact spot. Not sure? Check "I don't know exact location" and the system places it along the river.</li>
         <li><strong>Add details</strong> — who took it, when, and what it shows. Photos with GPS data fill the location automatically.</li>
         <li><strong>It's published</strong> — the item appears on the map instantly, archived permanently in cloud storage.</li>
@@ -266,6 +266,6 @@
   <div id="toast" class="toast hidden" role="status"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="app.js?v=20260828-6"></script>
+  <script src="app.js?v=20260828-7"></script>
 </body>
 </html>

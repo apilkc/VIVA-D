@@ -41,6 +41,14 @@ function parseSocial(url) {
       const status = parsed.pathname.match(/\/status\/([0-9]+)/i);
       return { platform: 'x', postId: status ? status[1] : '' };
     }
+    if (host === 'instagram.com' || host.endsWith('.instagram.com')) {
+      const post = parsed.pathname.match(/\/(?:p|reel|reels|tv)\/([^/?#]+)/i);
+      return { platform: 'instagram', postId: post ? post[1] : '' };
+    }
+    if (host === 'tiktok.com' || host.endsWith('.tiktok.com')) {
+      const video = parsed.pathname.match(/\/@[^/]+\/video\/([0-9]+)/i);
+      return { platform: 'tiktok', postId: video ? video[1] : '' };
+    }
   } catch {
     return null;
   }
@@ -418,8 +426,12 @@ function locationLabel(item) {
 
 function sourceLabel(item) {
   if (!item.source_url) return '';
-  const platform = item.source_platform === 'x' ? 'X/Twitter' : item.source_platform === 'facebook' ? 'Facebook' : 'social post';
+  const platform = socialPlatformLabel(item.source_platform);
   return '<a class="source-link" href="' + esc(item.source_url) + '" target="_blank" rel="noopener noreferrer">Original ' + platform + ' post ↗</a>';
+}
+
+function socialPlatformLabel(platform) {
+  return platform === 'x' ? 'X/Twitter' : platform === 'facebook' ? 'Facebook' : platform === 'instagram' ? 'Instagram' : platform === 'tiktok' ? 'TikTok' : 'social';
 }
 
 function popupHtml(item) {
@@ -1023,7 +1035,7 @@ async function fetchSocialMetadata(sourceUrl) {
       const formatted = formatDateForDisplay(data.upload_date);
       if (formatted) $('#capturedAt').value = formatted;
     }
-    const platform = data.platform === 'x' ? 'X/Twitter' : 'Facebook';
+    const platform = socialPlatformLabel(data.platform);
     hint.textContent = 'Detected ' + platform + '. Metadata auto-filled where available. You can edit any field.';
   } catch {
     hint.textContent = 'Could not read metadata. Fill in the fields manually.';
@@ -1035,7 +1047,7 @@ function updateSourceHint() {
   const hint = $('#sourceHint');
   const parsed = parseSocial(source);
   if (!source) { hint.classList.add('hidden'); clearTimeout(metadataTimer); return; }
-  hint.textContent = parsed ? 'Detected ' + (parsed.platform === 'x' ? 'X/Twitter' : 'Facebook') + '. The server will download one public media item and archive it in Google Cloud Storage.' : 'Use a public Facebook, X, or Twitter post URL.';
+  hint.textContent = parsed ? 'Detected ' + socialPlatformLabel(parsed.platform) + '. The server will download one public media item and archive it in Google Cloud Storage.' : 'Use a public Facebook, X/Twitter, Instagram, or TikTok post URL.';
   hint.classList.remove('hidden');
   clearTimeout(metadataTimer);
   if (parsed) {
@@ -1119,8 +1131,8 @@ function validateForm() {
   const title = $('#title').value.trim();
 
   if (importing) {
-    if (!source) errors.push('Paste the Facebook, X, or Twitter post link to import.');
-    else if (!parseSocial(source)) errors.push('The source link must be a Facebook, X, or Twitter post link.');
+    if (!source) errors.push('Paste the Facebook, X/Twitter, Instagram, or TikTok post link to import.');
+    else if (!parseSocial(source)) errors.push('The source link must be a Facebook, X/Twitter, Instagram, or TikTok post link.');
   } else if (documentMode) {
     if (!file) errors.push('Choose the document file you want to archive.');
     if (file && file.type !== 'application/pdf' && !file.type.startsWith('image/')) errors.push('Choose a PDF or image file for the document.');

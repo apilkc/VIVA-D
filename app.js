@@ -158,7 +158,7 @@ function validate(v, { directUpload = false, socialImport = false, file = null }
     if (v.source_url.length > MAX_LEN.source_url) {
       errors.push('The source link is too long.');
     } else if (!parseSocialLink(v.source_url)) {
-      errors.push('Source link must be a public Facebook, X, or Twitter post link.');
+      errors.push('Source link must be a public Facebook, X/Twitter, Instagram, or TikTok post link.');
     }
   }
 
@@ -350,7 +350,7 @@ app.post('/api/extract-gps', exifUpload.single('image'), async (req, res) => {
 app.get('/api/social-metadata', async (req, res) => {
   const url = typeof req.query.url === 'string' ? req.query.url.trim() : '';
   if (!url || !parseSocialLink(url)) {
-    return res.status(400).json({ error: 'Provide a valid Facebook, X, or Twitter post URL.' });
+    return res.status(400).json({ error: 'Provide a valid public Facebook, X/Twitter, Instagram, or TikTok post URL.' });
   }
   try {
     const meta = await extractSocialMetadata(url);
@@ -519,7 +519,7 @@ async function createItemHandler(req, res) {
     return res.status(400).json({ errors });
   }
   if (!directUpload && !sourceImport && !v.drive_url) {
-    return res.status(400).json({ errors: ['Choose a local file or provide a Facebook, X, or Twitter link.'] });
+    return res.status(400).json({ errors: ['Choose a local file or provide a Facebook, X/Twitter, Instagram, or TikTok link.'] });
   }
   if (directUpload && hasSourceUrl) {
     removeTemporaryFile(req.file);
@@ -712,7 +712,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 const BROWSE_FOLDERS = [
   { key: 'image', label: '📷 Images', desc: 'Photos uploaded by the community' },
   { key: 'video', label: '🎥 Videos', desc: 'Videos uploaded or imported from social media' },
-  { key: 'download', label: '⬇️ Downloads', desc: 'Files downloaded from Facebook, X/Twitter' },
+  { key: 'download', label: '⬇️ Downloads', desc: 'Files downloaded from public social posts' },
   { key: 'document', label: '📄 Documents', desc: 'Reports, PDFs, and other documents' },
 ];
 

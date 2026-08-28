@@ -132,7 +132,7 @@ function runDownloader(url, outputTemplate, python) {
 async function downloadSocialMedia(sourceUrl) {
   const source = parseSocialLink(sourceUrl);
   if (!source) {
-    const error = new Error('Source link must be a Facebook, X, or Twitter post link.');
+    const error = new Error('Source link must be a public Facebook, X/Twitter, Instagram, or TikTok post link.');
     error.code = 'INVALID_SOCIAL_URL';
     throw error;
   }
@@ -188,7 +188,7 @@ function cleanupDownloadedMedia(download) {
 async function extractSocialMetadata(sourceUrl) {
   const source = parseSocialLink(sourceUrl);
   if (!source) {
-    const error = new Error('Source link must be a Facebook, X, or Twitter post link.');
+    const error = new Error('Source link must be a public Facebook, X/Twitter, Instagram, or TikTok post link.');
     error.code = 'INVALID_SOCIAL_URL';
     throw error;
   }
