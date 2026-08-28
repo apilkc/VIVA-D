@@ -81,7 +81,7 @@ test('creates a valid legacy item, published immediately, with a thumbnail URL',
   assert.equal(status, 201);
   assert.equal(data.item.title, 'Bridge washed out near Timure');
   assert.equal(data.item.location_source, 'Photo GPS');
-  assert.equal(data.item.thumbnailUrl, 'https://drive.google.com/thumbnail?id=ABC123xyz&sz=w800');
+  assert.equal(data.item.thumbnailUrl, '/api/items/1/thumbnail');
   assert.equal(typeof data.item.id, 'number');
 });
 

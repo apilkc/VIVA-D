@@ -7,6 +7,7 @@ const multer = require('multer');
 const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
+const { Readable } = require('stream');
 
 const db = require('./database');
 const { listAllItems } = db;
@@ -65,7 +66,9 @@ function serialize(item) {
     submitted_at: item.submitted_at,
     community_notes: item.community_notes || '',
     metadata_history: item.metadata_history || '[]',
-    thumbnailUrl: item.thumbnail_url || (isGcs && isImageFile ? driveUrl : (!isGcs && driveFileId ? thumbnailUrl(driveFileId) : null)),
+    // Serve latest-strip thumbnails from this app. This avoids fragile cross-origin
+    // image loads while keeping the original media URL available for the detail view.
+    thumbnailUrl: (item.thumbnail_url || (isGcs && isImageFile ? driveUrl : (!isGcs && driveFileId ? thumbnailUrl(driveFileId) : null))) ? `/api/items/${item.id}/thumbnail` : null,
     previewUrl,
   };
 }
@@ -375,6 +378,28 @@ app.get('/api/items/:id', async (req, res, next) => {
     const item = Number.isInteger(id) && id > 0 ? await db.getItem(id) : null;
     if (!item) return res.status(404).json({ error: 'Not found.' });
     res.json({ item: serialize(item) });
+  } catch (error) { next(error); }
+});
+
+app.get('/api/items/:id/thumbnail', async (req, res, next) => {
+  const id = Number(req.params.id);
+  try {
+    const item = Number.isInteger(id) && id > 0 ? await db.getItem(id) : null;
+    if (!item) return res.status(404).end();
+
+    const driveUrl = item.drive_url || '';
+    const isGcs = driveUrl.startsWith('https://storage.googleapis.com/');
+    const isImageFile = /^image\//i.test(item.mime_type || '')
+      || /\.(avif|gif|heic|jpe?g|png|webp)(?:$|[?#])/i.test(driveUrl);
+    const sourceUrl = item.thumbnail_url
+      || (isGcs && isImageFile ? driveUrl : (!isGcs && item.drive_file_id ? thumbnailUrl(item.drive_file_id) : ''));
+    if (!sourceUrl) return res.status(404).end();
+
+    const upstream = await fetch(sourceUrl);
+    if (!upstream.ok || !upstream.body) return res.status(404).end();
+    res.set('Content-Type', upstream.headers.get('content-type') || 'image/jpeg');
+    res.set('Cache-Control', 'public, max-age=300');
+    Readable.fromWeb(upstream.body).pipe(res);
   } catch (error) { next(error); }
 });
 

@@ -537,6 +537,7 @@ function renderLatestEvidence() {
   list.innerHTML = latest.map((item) => '<button class="latest-card" type="button" data-evidence-id="' + item.id + '" onclick="openEvidencePanel(' + item.id + ')">' +
     latestThumbnail(item) +
     '<strong>' + esc(shorten(item.title || 'Untitled evidence', 42)) + '</strong><small>' + esc(item.captured_at || tr('noDate')) + '</small></button>').join('');
+  requestAnimationFrame(updateLatestScrollControls);
 }
 
 function focusEvidence(item) {
@@ -1232,10 +1233,28 @@ $('#aboutArchiveLink').addEventListener('click', (e) => { e.preventDefault(); op
 $('#metadataSheetBtn')?.addEventListener('click', openMetadataSheet);
 $('#panelMetadataBtn').addEventListener('click', openMetadataSheet);
 $('#detailCloseBtn').addEventListener('click', closeDetailPanel);
+function updateLatestScrollControls() {
+  const list = $('#latestEvidence');
+  const previous = $('#latestScrollPrevious');
+  const next = $('#latestScrollNext');
+  if (!list || !previous || !next) return;
+  const maxScroll = Math.max(0, list.scrollWidth - list.clientWidth);
+  const hasOverflow = maxScroll > 4;
+  previous.hidden = !hasOverflow;
+  next.hidden = !hasOverflow;
+  previous.disabled = list.scrollLeft <= 4;
+  next.disabled = list.scrollLeft >= maxScroll - 4;
+}
+$('#latestScrollPrevious').addEventListener('click', () => {
+  const list = $('#latestEvidence');
+  list.scrollBy({ left: -Math.max(220, list.clientWidth * 0.8), behavior: 'smooth' });
+});
 $('#latestScrollNext').addEventListener('click', () => {
   const list = $('#latestEvidence');
   list.scrollBy({ left: Math.max(220, list.clientWidth * 0.8), behavior: 'smooth' });
 });
+$('#latestEvidence').addEventListener('scroll', updateLatestScrollControls, { passive: true });
+window.addEventListener('resize', updateLatestScrollControls);
 $('#metadataUpdateForm').addEventListener('submit', submitMetadataUpdate);
 $('#sortEvidence').addEventListener('change', (e) => { panelSort = e.target.value; renderEvidencePanel(); });
 $('#timelineRange').addEventListener('input', (e) => {
