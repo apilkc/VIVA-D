@@ -571,7 +571,13 @@ textarea { min-height: 96px; resize: vertical; }
 .map-wrap.detail-open .filter-bar { right: calc(25% + 16px); }
 .utility-docs { display:none; }
 .detail-card { max-width: 700px; }
-.detail-title { margin: 4px 0 8px; font-size: 1.3rem; }
+.detail-title {
+  margin: 4px 0 8px;
+  font-size: clamp(1rem, 1.4vw, 1.15rem);
+  line-height: 1.28;
+  letter-spacing: -.01em;
+  overflow-wrap: anywhere;
+}
 .detail-badge {
   font-size: 0.78rem;
   display: inline-block;
