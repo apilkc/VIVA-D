@@ -62,10 +62,32 @@ test('reports map configuration separately from Drive configuration', async () =
   assert.equal(data.googleMapsApiKey, '');
 });
 
+test('upload form accepts batches of up to ten photos or videos', async () => {
+  const html = await (await fetch(`${base}/`)).text();
+  const script = await (await fetch(`${base}/app.js`)).text();
+  assert.match(html, /id="mediaFile"[^>]*multiple/);
+  assert.match(html, /up to 10/i);
+  assert.match(script, /files\.length > 10/);
+  assert.match(script, /Archiving.*of.*files\.length/);
+});
+
 test('formats EXIF photo capture dates for form autofill', () => {
   assert.equal(app.locals.formatExifCaptureDate(new Date(2026, 7, 26, 6, 30)), '20260826');
   assert.equal(app.locals.formatExifCaptureDate('2026:08:26 06:30:00'), '20260826');
   assert.equal(app.locals.formatExifCaptureDate(''), '');
+});
+
+test('keeps each batch photo geotag independent from the shared fallback', () => {
+  const first = app.locals.applyEmbeddedPhotoMetadata(
+    { lat: 28.2, lng: 85.3, captured_at: 'Shared date', location_source: 'User-set' },
+    { gps: { lat: 28.251, lng: 85.371 }, capturedAt: '20260826' }
+  );
+  const second = app.locals.applyEmbeddedPhotoMetadata(
+    { lat: 28.2, lng: 85.3, captured_at: 'Shared date', location_source: 'User-set' },
+    { gps: { lat: 28.289, lng: 85.529 }, capturedAt: '20260827' }
+  );
+  assert.deepEqual(first, { lat: 28.251, lng: 85.371, captured_at: '2026-08-26', location_source: 'Photo GPS' });
+  assert.deepEqual(second, { lat: 28.289, lng: 85.529, captured_at: '2026-08-27', location_source: 'Photo GPS' });
 });
 
 test('starts with an empty list', async () => {

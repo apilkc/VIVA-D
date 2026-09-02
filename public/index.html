@@ -99,8 +99,8 @@
         </fieldset>
 
         <div id="uploadInputBlock">
-          <label class="required" for="mediaFile" id="mediaFileLabel" data-i18n="mediaFile">Photo or video file</label>
-          <input type="file" id="mediaFile" name="media" accept="image/*,video/*,application/pdf">
+          <label class="required" for="mediaFile" id="mediaFileLabel" data-i18n="mediaFile">Photo or video files (up to 10)</label>
+          <input type="file" id="mediaFile" name="media" accept="image/*" multiple>
           <p class="field-hint" data-i18n="archiveHint">Archived securely in cloud storage. Photos with GPS data auto-fill the location.</p>
           <p id="archiveStatus" class="archive-status">Checking cloud archive connection…</p>
 

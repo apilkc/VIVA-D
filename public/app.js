@@ -84,7 +84,7 @@ const translations = {
     openMetadata: 'Open metadata', street: 'Street', satellite: 'Satellite', latestEvidence: 'Latest evidence', browseArchive: 'Browse the archive',
     aboutBeforeCreator: 'VIVA-D is an open collection of geotagged photographs and videos documenting the impacts of natural disasters, initially focused on floods and landslides. Created by',
     aboutAfterCreator: 'to support disaster reconnaissance, research, assessment, and resilience through organized visual evidence and metadata.', supportDisaster: 'Support disaster response through the Prime Minister Disaster Relief Fund →', footerArchive: 'Public evidence archive · Permanently archived in Google Cloud Storage',
-    addingMedia: 'How are you adding this media?', uploadDevice: 'Upload from this device', importSocial: 'Import from Facebook, X, or Twitter', mediaFile: 'Photo or video file', originalPost: 'Original Facebook, X, or Twitter post',
+    addingMedia: 'How are you adding this media?', uploadDevice: 'Upload from this device', importSocial: 'Import from Facebook, X, or Twitter', mediaFile: 'Photo or video files (up to 10)', originalPost: 'Original Facebook, X, or Twitter post',
     importHint: 'The server will download the media from this post, archive it, and keep this link as the source.',
     archiveHint: 'Archived securely in cloud storage. Photos with GPS data auto-fill the location.', whatIsIt: 'What is it?', whereTaken: 'Where was it taken?',
     unknownLocation: "I don't know the exact location — place it approximately along the river", mapLocationHint: 'Click the map to drop the pin at the exact spot.',
@@ -104,7 +104,7 @@ const translations = {
     openMetadata: 'मेटाडेटा हेर्नुहोस्', street: 'सडक', satellite: 'स्याटेलाइट', latestEvidence: 'नवीनतम प्रमाण', browseArchive: 'अभिलेख हेर्नुहोस्',
     aboutBeforeCreator: 'रसुवाको भोटेकोशी क्षेत्रमा बाढीको असर, क्षति, पूर्वाधार अवरोध र पुनर्स्थापनाको अभिलेख बनाउने सामुदायिक पहल। सिर्जना गर्ने',
     aboutAfterCreator: 'ले सार्वजनिक हितको पारदर्शी अभिलेखीकरण, अनुसन्धान र प्रमाणीकरणलाई सहयोग गर्न यो नक्सा बनाएका हुन्।', supportDisaster: 'प्रधानमन्त्री दैवी प्रकोप उद्धार कोषमार्फत विपद् प्रतिकार्यमा सहयोग गर्नुहोस् →', footerArchive: 'सार्वजनिक प्रमाण अभिलेख · Google Cloud Storage मा स्थायी रूपमा सुरक्षित',
-    addingMedia: 'यो सामग्री कसरी थप्दै हुनुहुन्छ?', uploadDevice: 'यस उपकरणबाट अपलोड गर्नुहोस्', importSocial: 'Facebook, X वा Twitter बाट आयात गर्नुहोस्', mediaFile: 'फोटो वा भिडियो फाइल', originalPost: 'मूल Facebook, X वा Twitter पोस्ट',
+    addingMedia: 'यो सामग्री कसरी थप्दै हुनुहुन्छ?', uploadDevice: 'यस उपकरणबाट अपलोड गर्नुहोस्', importSocial: 'Facebook, X वा Twitter बाट आयात गर्नुहोस्', mediaFile: 'फोटो वा भिडियो फाइलहरू (एक पटकमा १० सम्म)', originalPost: 'मूल Facebook, X वा Twitter पोस्ट',
     importHint: 'सर्भरले यो पोस्टबाट सामग्री डाउनलोड गरी अभिलेख गर्छ र स्रोतको रूपमा यो लिंक राख्छ।',
     archiveHint: 'क्लाउडमा सुरक्षित रूपमा अभिलेख हुन्छ। GPS भएको फोटोले स्थान स्वतः भर्छ।', whatIsIt: 'यो के हो?', whereTaken: 'यो कहाँ खिचिएको हो?',
     unknownLocation: 'ठ्याक्कै स्थान थाहा छैन — नदीको किनारमा अनुमानित स्थान राख्नुहोस्', mapLocationHint: 'ठ्याक्कै ठाउँमा पिन राख्न नक्सामा क्लिक गर्नुहोस्।',
@@ -856,8 +856,9 @@ function updateIngestMode() {
   $('#documentDetailsBlock').classList.toggle('hidden', !documentMode);
   $('#mediaDetailsFields').classList.toggle('hidden', documentMode);
   $('#mediaFile').required = !importing;
-  $('#mediaFile').accept = documentMode ? 'application/pdf,image/*' : 'image/*,video/*,application/pdf';
-  $('#mediaFileLabel').textContent = documentMode ? 'Document file (PDF or image)' : 'Photo or video file';
+  $('#mediaFile').multiple = !documentMode && !importing;
+  $('#mediaFile').accept = documentMode ? 'application/pdf,image/*' : selectedMediaType() === 'video' ? 'video/*' : 'image/*';
+  $('#mediaFileLabel').textContent = documentMode ? 'Document file (PDF or image)' : selectedMediaType() === 'video' ? 'Video files (up to 10)' : 'Photo files (up to 10)';
   if (importing) {
     $('#archiveStatus').classList.add('hidden');
     $('#mediaFile').value = '';
@@ -950,7 +951,8 @@ function fillTitleFromFile(file) {
 }
 
 function updateLocalPreview() {
-  const file = $('#mediaFile').files[0];
+  const files = Array.from($('#mediaFile').files);
+  const file = files[0];
   if (!file) { $('#localPreview').classList.add('hidden'); return; }
   const url = URL.createObjectURL(file);
   const image = $('#localImagePreview');
@@ -961,7 +963,8 @@ function updateLocalPreview() {
   video.classList.toggle('hidden', !isVideo);
   if (isImage) image.src = url;
   else if (isVideo) video.src = url;
-  $('#localFileName').textContent = file.name + ' · ' + Math.ceil(file.size / 1024 / 1024) + ' MB';
+  const batchNote = files.length > 1 ? ' · ' + files.length + ' files selected' : '';
+  $('#localFileName').textContent = file.name + ' · ' + Math.ceil(file.size / 1024 / 1024) + ' MB' + batchNote;
   $('#localPreview').classList.remove('hidden');
   fillTitleFromFile(file);
 
@@ -1125,7 +1128,8 @@ function validateForm() {
   const errors = [];
   const documentMode = selectedMediaType() === 'document';
   const importing = !documentMode && currentMode() === 'import';
-  const file = $('#mediaFile').files[0];
+  const files = Array.from($('#mediaFile').files);
+  const file = files[0];
   const source = $('#sourceUrl').value.trim();
   if (!importing && file && !$('#title').value.trim()) fillTitleFromFile(file);
   const title = $('#title').value.trim();
@@ -1146,7 +1150,9 @@ function validateForm() {
     }
   } else {
     if (!file) errors.push('Choose the photo or video you want to archive.');
-    if (file && !/^(image|video)\//.test(file.type)) errors.push('Choose an image or video file.');
+    if (files.length > 10) errors.push('Choose no more than 10 files in one batch.');
+    const expectedType = selectedMediaType() === 'video' ? 'video/' : 'image/';
+    if (files.some((selected) => !selected.type.startsWith(expectedType))) errors.push('Every selected file must match the chosen photo or video type.');
   }
   if (!documentMode && !locationConfirmed) errors.push('Set the location by clicking the map or checking "I don\'t know exact location".');
   if (!title) errors.push('Give this item a short title.');
@@ -1163,30 +1169,40 @@ async function submitItem(e) {
   const mediaType = selectedMediaType();
   const documentMode = mediaType === 'document';
   const importing = !documentMode && currentMode() === 'import';
-  const formData = new FormData();
-  if (!importing) {
-    formData.append('media', $('#mediaFile').files[0]);
-    formData.append('media_type', mediaType);
+  const files = importing ? [null] : Array.from($('#mediaFile').files);
+  const batchSize = files.length;
+  const enteredTitle = $('#title').value.trim();
+  const sharedTitle = batchSize > 1 && enteredTitle === autoTitleFromFile ? '' : enteredTitle;
+
+  function buildFormData(file) {
+    const formData = new FormData();
+    if (file) {
+      formData.append('media', file);
+      formData.append('media_type', documentMode ? 'document' : file.type.startsWith('video/') ? 'video' : 'photo');
+    }
+    if (importing) formData.append('source_url', $('#sourceUrl').value.trim());
+    const fileTitle = file ? titleFromFilename(file.name) : '';
+    const itemTitle = batchSize > 1 ? [sharedTitle, fileTitle].filter(Boolean).join(' — ').slice(0, 200) : sharedTitle;
+    formData.append('title', itemTitle || fileTitle);
+    if (documentMode) {
+      formData.append('description', $('#documentNote').value.trim());
+      formData.append('document_source_url', $('#documentSourceUrl').value.trim());
+      formData.append('publisher_type', $('#publisherType').value);
+    } else {
+      formData.append('description', $('#description').value.trim());
+      formData.append('location_name', $('#locationName').value.trim());
+      formData.append('lat', selectedLat);
+      formData.append('lng', selectedLng);
+      formData.append('location_source', locationSource || 'User-set');
+      formData.append('captured_at', $('#capturedAt').value.trim());
+      formData.append('taken_by', $('#takenBy').value.trim());
+      formData.append('owner', $('#owner').value.trim());
+      formData.append('contact', $('#contact').value.trim());
+    }
+    formData.append('acknowledged', '1');
+    formData.append('website', $('#honeypot').value);
+    return formData;
   }
-  if (importing) formData.append('source_url', $('#sourceUrl').value.trim());
-  formData.append('title', $('#title').value.trim());
-  if (documentMode) {
-    formData.append('description', $('#documentNote').value.trim());
-    formData.append('document_source_url', $('#documentSourceUrl').value.trim());
-    formData.append('publisher_type', $('#publisherType').value);
-  } else {
-    formData.append('description', $('#description').value.trim());
-    formData.append('location_name', $('#locationName').value.trim());
-    formData.append('lat', selectedLat);
-    formData.append('lng', selectedLng);
-    formData.append('location_source', locationSource || 'User-set');
-    formData.append('captured_at', $('#capturedAt').value.trim());
-    formData.append('taken_by', $('#takenBy').value.trim());
-    formData.append('owner', $('#owner').value.trim());
-    formData.append('contact', $('#contact').value.trim());
-  }
-  formData.append('acknowledged', '1');
-  formData.append('website', $('#honeypot').value);
 
   const submitBtn = $('#submitBtn');
   submitBtn.disabled = true;
@@ -1196,25 +1212,30 @@ async function submitItem(e) {
   if (importing) closeModal('uploadModal');
 
   try {
-    const res = await fetch('/api/items', { method: 'POST', body: formData });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      if (importing) openUpload();
-      showErrors(Array.isArray(data.errors) ? data.errors : [data.error || 'Something went wrong. Please try again.']);
-      return;
-    }
-    if (res.status === 202 && data.item) {
-      addPendingMarker(data.item);
-      startPendingPoll();
-      toast('Import started — archiving in the background ✔');
-    } else {
-      closeModal('uploadModal');
-      toast(documentMode ? 'Archived in cloud storage and added to the archive ✔' : 'Archived in cloud storage and added to the map ✔');
-      if (data.item) {
+    const created = [];
+    for (let index = 0; index < files.length; index += 1) {
+      submitBtn.textContent = files.length > 1 ? 'Archiving ' + (index + 1) + ' of ' + files.length + '…' : 'Submitting…';
+      const res = await fetch('/api/items', { method: 'POST', body: buildFormData(files[index]) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (importing) openUpload();
+        const reason = Array.isArray(data.errors) ? data.errors.join(' ') : data.error || 'Something went wrong. Please try again.';
+        showErrors([(created.length ? created.length + ' file(s) were archived. ' : '') + 'Upload stopped at file ' + (index + 1) + ': ' + reason]);
+        return;
+      }
+      if (res.status === 202 && data.item) {
+        addPendingMarker(data.item);
+        startPendingPoll();
+      } else if (data.item) {
+        created.push(data.item);
         addItem(data.item);
-        if (hasMapLocation(data.item)) map.flyTo([data.item.lat, data.item.lng], Math.max(map.getZoom(), 13), { duration: 1 });
       }
     }
+    closeModal('uploadModal');
+    if (importing) toast('Import started — archiving in the background ✔');
+    else toast(created.length + (created.length === 1 ? ' item archived' : ' items archived') + ' in cloud storage ✔');
+    const lastItem = created[created.length - 1];
+    if (lastItem && hasMapLocation(lastItem)) map.flyTo([lastItem.lat, lastItem.lng], Math.max(map.getZoom(), 13), { duration: 1 });
   } catch {
     if (importing) openUpload();
     showErrors(['Could not reach the server. Please check your connection and try again.']);

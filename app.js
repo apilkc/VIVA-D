@@ -304,6 +304,33 @@ function formatExifCaptureDate(value) {
 
 app.locals.formatExifCaptureDate = formatExifCaptureDate;
 
+async function readPhotoMetadata(filepath) {
+  const exifr = require('exifr');
+  const exif = await exifr.parse(filepath, { gps: true, exif: true });
+  const capturedAt = formatExifCaptureDate(exif && (exif.DateTimeOriginal || exif.CreateDate));
+  let gps = null;
+  if (exif && exif.latitude != null && exif.longitude != null) {
+    const lat = Number(exif.latitude);
+    const lng = Number(exif.longitude);
+    if (lat >= 26 && lat <= 31 && lng >= 79.5 && lng <= 89) gps = { lat, lng };
+  }
+  return { gps, capturedAt };
+}
+
+function applyEmbeddedPhotoMetadata(values, metadata) {
+  if (metadata?.gps) {
+    values.lat = metadata.gps.lat;
+    values.lng = metadata.gps.lng;
+    values.location_source = 'Photo GPS';
+  }
+  if (metadata?.capturedAt) {
+    values.captured_at = metadata.capturedAt.replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3');
+  }
+  return values;
+}
+
+app.locals.applyEmbeddedPhotoMetadata = applyEmbeddedPhotoMetadata;
+
 const exifUpload = multer({
   storage: multer.diskStorage({
     destination: os.tmpdir(),
@@ -323,23 +350,11 @@ app.post('/api/extract-gps', exifUpload.single('image'), async (req, res) => {
     return res.json({ gps: null, capturedAt: '' });
   }
   try {
-    const exifr = require('exifr');
     // Read coordinates and the original camera timestamp from common phone
     // photo formats, including JPEG, PNG, WebP, TIFF and HEIC/HEIF.
-    const exif = await exifr.parse(req.file.path, { gps: true, exif: true });
+    const metadata = await readPhotoMetadata(req.file.path);
     removeTemporaryFile(req.file);
-    const capturedAt = formatExifCaptureDate(
-      exif && (exif.DateTimeOriginal || exif.CreateDate)
-    );
-    let gps = null;
-    if (exif && exif.latitude != null && exif.longitude != null) {
-      const lat = Number(exif.latitude);
-      const lng = Number(exif.longitude);
-      if (lat >= 26 && lat <= 31 && lng >= 79.5 && lng <= 89) {
-        gps = { lat, lng };
-      }
-    }
-    res.json({ gps, capturedAt });
+    res.json(metadata);
   } catch (error) {
     console.error('EXIF extraction error:', error.message);
     removeTemporaryFile(req.file);
@@ -510,6 +525,15 @@ async function createItemHandler(req, res) {
     v.location_source = '';
   }
   if (directUpload && !v.title) v.title = titleFromFilename(req.file.originalname);
+  if (directUpload && v.media_type === 'photo' && /^image\//.test(req.file.mimetype || '')) {
+    try {
+      // Each batch item is inspected independently. Its embedded GPS/date wins
+      // over the form's shared fallback without affecting any sibling file.
+      applyEmbeddedPhotoMetadata(v, await readPhotoMetadata(req.file.path));
+    } catch (error) {
+      console.warn(`Could not read embedded metadata from ${req.file.originalname}:`, error.message);
+    }
+  }
   // A JSON request with a Drive link is retained for legacy records; the
   // public form uses source_url alone to request a social-media import.
   const sourceImport = !directUpload && hasSourceUrl && !v.drive_url;
@@ -671,10 +695,10 @@ const upload = multer({
 
 const POST_LIMIT = rateLimit({
   windowMs: 60 * 60 * 1000,
-  limit: 10,
+  limit: 30,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many submissions from this address. Please wait an hour and try again.' },
+  message: { error: 'Too many files were submitted from this address. Please wait an hour and try again.' },
 });
 
 if (process.env.NODE_ENV === 'test') {
@@ -695,7 +719,7 @@ app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     const message = err.code === 'LIMIT_FILE_SIZE'
       ? 'The file is too large. Maximum size is 250 MB.'
-      : 'The upload could not be read. Please choose one image or video file.';
+      : 'The upload could not be read. Please choose an image or video file.';
     return res.status(400).json({ error: message });
   }
   if (err.code === 'UNSUPPORTED_MEDIA_TYPE') {
