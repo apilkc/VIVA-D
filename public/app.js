@@ -157,6 +157,53 @@ let googleSatelliteLayer = null;
 let googleSatellitePromise = null;
 let mapStyleRequest = 0;
 
+const placeSearch = L.control({ position: 'topleft' });
+placeSearch.onAdd = () => {
+  const container = L.DomUtil.create('div', 'map-place-search');
+  container.innerHTML = '<form role="search"><label class="sr-only" for="mapPlaceQuery">Find a place on the map</label><input id="mapPlaceQuery" type="search" placeholder="Find a place…" autocomplete="off" maxlength="200"><button type="submit" aria-label="Find place">⌕</button></form><div class="place-results" hidden></div>';
+  L.DomEvent.disableClickPropagation(container);
+  L.DomEvent.disableScrollPropagation(container);
+  const form = container.querySelector('form');
+  const results = container.querySelector('.place-results');
+  const button = form.querySelector('button');
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const query = container.querySelector('input').value.trim();
+    if (!query) { results.hidden = true; return; }
+    button.disabled = true;
+    results.hidden = false;
+    results.textContent = 'Finding places…';
+    try {
+      const config = await mapConfigPromise;
+      if (!config.googleMapsApiKey) throw new Error('Place search is not configured yet.');
+      await loadGoogleMapsApi(config.googleMapsApiKey);
+      const response = await new google.maps.Geocoder().geocode({ address: query, region: 'np' });
+      results.replaceChildren();
+      for (const place of response.results.slice(0, 5)) {
+        const option = document.createElement('button');
+        option.type = 'button';
+        option.textContent = place.formatted_address;
+        option.addEventListener('click', () => {
+          const location = place.geometry.location;
+          const viewport = place.geometry.viewport;
+          if (viewport) {
+            const southwest = viewport.getSouthWest();
+            const northeast = viewport.getNorthEast();
+            map.fitBounds([[southwest.lat(), southwest.lng()], [northeast.lat(), northeast.lng()]], { maxZoom: 16, padding: [30, 30] });
+          } else map.flyTo([location.lat(), location.lng()], 14);
+          results.hidden = true;
+        });
+        results.append(option);
+      }
+      if (!response.results.length) results.textContent = 'No places found. Try a district or nearby town.';
+    } catch (error) {
+      results.textContent = error.code === 'ZERO_RESULTS' ? 'No places found. Try a district or nearby town.' : 'Place search unavailable. Please try again later.';
+    } finally { button.disabled = false; }
+  });
+  return container;
+};
+placeSearch.addTo(map);
+
 function loadScript(src) {
   return new Promise((resolve, reject) => {
     const script = document.createElement('script');
