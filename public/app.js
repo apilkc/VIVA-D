@@ -174,35 +174,34 @@ placeSearch.onAdd = () => {
     results.hidden = false;
     results.textContent = 'Finding places…';
     try {
-      const config = await mapConfigPromise;
-      if (!config.googleMapsApiKey) throw new Error('Place search is not configured yet.');
-      await loadGoogleMapsApi(config.googleMapsApiKey);
-      const response = await new google.maps.Geocoder().geocode({ address: query, region: 'np' });
+      const response = await fetch('/api/places?q=' + encodeURIComponent(query));
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Place search unavailable.');
       results.replaceChildren();
-      for (const place of response.results.slice(0, 5)) {
+      for (const place of data.places) {
         const option = document.createElement('button');
         option.type = 'button';
-        option.textContent = place.formatted_address;
+        option.textContent = place.name;
         option.addEventListener('click', () => {
-          const location = place.geometry.location;
-          const viewport = place.geometry.viewport;
-          if (viewport) {
-            const southwest = viewport.getSouthWest();
-            const northeast = viewport.getNorthEast();
-            map.fitBounds([[southwest.lat(), southwest.lng()], [northeast.lat(), northeast.lng()]], { maxZoom: 16, padding: [30, 30] });
-          } else map.flyTo([location.lat(), location.lng()], 14);
+          map.flyTo([place.lat, place.lng], 14);
           results.hidden = true;
         });
         results.append(option);
       }
-      if (!response.results.length) results.textContent = 'No places found. Try a district or nearby town.';
+      if (!data.places.length) results.textContent = 'No places found. Try a district or nearby town.';
+      else {
+        const attribution = document.createElement('small');
+        attribution.textContent = 'Place data © OpenStreetMap contributors · Photon';
+        results.append(attribution);
+      }
     } catch (error) {
-      results.textContent = error.code === 'ZERO_RESULTS' ? 'No places found. Try a district or nearby town.' : 'Place search unavailable. Please try again later.';
+      results.textContent = error.message || 'Place search unavailable. Please try again later.';
     } finally { button.disabled = false; }
   });
   return container;
 };
 placeSearch.addTo(map);
+map.getContainer().append(placeSearch.getContainer());
 
 function loadScript(src) {
   return new Promise((resolve, reject) => {
