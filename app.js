@@ -279,11 +279,23 @@ app.get('/api/places', rateLimit({ windowMs: 60000, limit: 20, message: { error:
   if (Date.now() < nextPlaceLookup) return res.status(429).json({ error: 'Please wait a moment and search again.' });
   nextPlaceLookup = Date.now() + 1000;
   try {
-    const url = new URL(process.env.PLACE_SEARCH_URL || 'https://photon.komoot.io/api/');
-    url.search = new URLSearchParams({ q: query, limit: '5', lat: '28.1', lon: '85.3' }).toString();
-    const response = await fetch(url, { signal: AbortSignal.timeout(10000), headers: { 'User-Agent': 'VIVA-D/1.0 (+https://archive.rasuwaflood.org/)' } });
-    if (!response.ok) throw new Error('Place provider unavailable');
-    const data = await response.json();
+    async function lookup(countrycode) {
+      const url = new URL(process.env.PLACE_SEARCH_URL || 'https://photon.komoot.io/api/');
+      const params = new URLSearchParams({ q: query, limit: '5', lat: '28.1', lon: '85.3' });
+      if (countrycode) params.set('countrycode', countrycode);
+      url.search = params.toString();
+      const response = await fetch(url, { signal: AbortSignal.timeout(10000), headers: { 'User-Agent': 'VIVA-D/1.0 (+https://archive.rasuwaflood.org/)' } });
+      if (!response.ok) throw new Error('Place provider unavailable');
+      return response.json();
+    }
+    // A geographic bias alone can still rank a same-named place overseas first.
+    // Search Nepal explicitly; only look worldwide when Nepal has no matches.
+    let data = await lookup('NP');
+    if (!(data.features || []).length) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      nextPlaceLookup = Date.now() + 1000;
+      data = await lookup();
+    }
     const places = (data.features || []).map(feature => ({
       name: [...new Set([feature.properties.name, feature.properties.city, feature.properties.district, feature.properties.state, feature.properties.country].filter(Boolean))].join(', '),
       lat: feature.geometry.coordinates[1], lng: feature.geometry.coordinates[0],
