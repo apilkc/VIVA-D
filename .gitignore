@@ -19,3 +19,9 @@ credentials/
 trial_metadata_gps.jpeg
 nepal-gps.jpg
 latest.json
+
+# Generated Cloudflare build and local state
+cloudflare/public/
+cloudflare/seed.sql
+.wrangler/
+.dev.vars
