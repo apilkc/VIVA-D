@@ -13,7 +13,9 @@ the preserved archive in read-only mode. Do not re-enable Railway or upgrade a p
    ```
 3. From the repository run `node cloudflare/seed.mjs`, then
    `npx wrangler d1 execute viva-d-archive --remote --file cloudflare/seed.sql`.
-   This creates the tables and inserts the preserved 125 records without replacing
+   The bundled snapshot excludes contributor contact, owner, photographer, notes and
+   edit-history fields to avoid publishing personal details in GitHub. The original
+   Google backup remains unchanged. This creates the tables and inserts 125 records without replacing
    existing records. Do this before enabling uploads. The Google backup included
    three more records than the earlier public API snapshot.
 4. Create a free Cloudflare Turnstile widget for the production hostname and the
