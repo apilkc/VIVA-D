@@ -151,8 +151,9 @@ const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.
 streetLayer.addTo(map);
 
 const mapConfigPromise = fetch('/api/config')
-  .then((res) => res.ok ? res.json() : {})
-  .catch(() => ({}));
+  .then(async (res) => { if (!res.ok || !(res.headers.get('content-type') || '').includes('application/json')) throw new Error('Static hosting'); return res.json(); })
+  .catch(() => ({ directUploadsEnabled: false, staticArchive: true, socialImportsEnabled: false }));
+const COST_NOTICE = 'Because of high costs, I’m reworking this feature and hope to make it available again soon.';
 let googleSatelliteLayer = null;
 let googleSatellitePromise = null;
 let mapStyleRequest = 0;
@@ -646,9 +647,14 @@ function addItem(item) {
 
 async function loadItems({ silent = false } = {}) {
   try {
-    const res = await fetch('/api/items', { cache: 'no-store' });
+    const config = await mapConfigPromise;
+    const res = await fetch(config.staticArchive ? '/archive-snapshot.json' : '/api/items', { cache: 'no-store' });
     if (!res.ok) throw new Error('Bad response');
     const data = await res.json();
+    data.items = data.items.map(item => {
+      const direct = (item.drive_url || '').startsWith('https://storage.googleapis.com/');
+      return { ...item, id: String(item.id), lat: Number(item.lat), lng: Number(item.lng), thumbnailUrl: item.thumbnailUrl || item.thumbnail_url || (direct && /^image\//.test(item.mime_type || '') ? item.drive_url : null), previewUrl: item.previewUrl || (direct ? item.drive_url : null) };
+    });
     const serverIds = new Set(data.items.map((item) => item.id));
     data.items.forEach(addItem);
     if (itemsById.size === 0) $('#emptyState').classList.remove('hidden');
@@ -665,7 +671,7 @@ async function loadItems({ silent = false } = {}) {
 let refreshTimer = null;
 function startLiveRefresh() {
   if (refreshTimer) return;
-  refreshTimer = setInterval(() => loadItems({ silent: true }), 5000);
+  refreshTimer = setInterval(() => { if (!document.hidden) loadItems({ silent: true }); }, 60000);
 }
 
 function updateCount() {
@@ -719,6 +725,7 @@ window.detailImgFallback = function detailImgFallback() {
 };
 
 window.downvoteItem = async function downvoteItem(id) {
+  if ((await mapConfigPromise).staticArchive) { toast('Community updates are temporarily unavailable during the hosting move.'); return; }
   try {
     const res = await fetch('/api/items/' + id + '/downvote', { method: 'POST' });
     const data = await res.json().catch(() => ({}));
@@ -796,7 +803,8 @@ function setupMetadataLocationMap(item) {
   setMetadataLocation(latlng);
   setTimeout(() => metadataLocationMap.invalidateSize(), 100);
 }
-window.openMetadataUpdate = function openMetadataUpdate(id) {
+window.openMetadataUpdate = async function openMetadataUpdate(id) {
+  if ((await mapConfigPromise).staticArchive) { toast('Community updates are temporarily unavailable during the hosting move.'); return; }
   const item = getEvidenceItem(id); if (!item) return;
   metadataUpdateId = item.id;
   $('#metadataTitleInput').value = item.title || '';
@@ -906,6 +914,9 @@ function updateIngestMode() {
   $('#mediaFile').accept = documentMode ? 'application/pdf,image/*' : selectedMediaType() === 'video' ? 'video/*' : 'image/*';
   $('#mediaFileLabel').textContent = documentMode ? 'Document file (PDF or image)' : selectedMediaType() === 'video' ? 'Video files (up to 10)' : 'Photo files (up to 10)';
   if (importing) {
+    $('#sourceHint').textContent = COST_NOTICE;
+    $('#sourceHint').classList.remove('hidden');
+    $('#importInputBlock .field-hint').textContent = COST_NOTICE;
     $('#archiveStatus').classList.add('hidden');
     $('#mediaFile').value = '';
     $('#localPreview').classList.add('hidden');
@@ -939,8 +950,8 @@ function resetUpload() {
 async function updateArchiveStatus() {
   const status = $('#archiveStatus');
   try {
-    const res = await fetch('/api/config');
-    const data = await res.json();
+    const data = await mapConfigPromise;
+    if (!data.directUploadsEnabled) { status.textContent = 'Uploads are temporarily unavailable while the archive moves to its new hosting. Existing evidence remains available to browse.'; status.classList.add('missing'); return; }
     const storageType = data.storageType === 'gcs' ? 'Google Cloud Storage' : 'Google Drive';
     status.textContent = data.directUploadsEnabled ? storageType + ' archive connected. Your selected file will be stored there.' : storageType + ' archive is not connected yet. The site owner must finish the one-time setup before uploads can be archived.';
     status.classList.add(data.directUploadsEnabled ? 'ready' : 'missing');
@@ -967,6 +978,12 @@ function getRandomRiverPoint() {
 async function extractPhotoMetadata(file) {
   if (!file || !file.type.startsWith('image/')) return null;
   try {
+    if (window.exifr) {
+      const metadata = await window.exifr.parse(file, { gps: true, tiff: true, exif: true });
+      const date = metadata?.DateTimeOriginal || metadata?.CreateDate;
+      const capturedAt = date instanceof Date && !Number.isNaN(date.getTime()) ? [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-') : '';
+      return { gps: Number.isFinite(metadata?.latitude) && Number.isFinite(metadata?.longitude) ? { lat: metadata.latitude, lng: metadata.longitude } : null, capturedAt };
+    }
     const formData = new FormData();
     formData.append('image', file);
     const res = await fetch('/api/extract-gps', { method: 'POST', body: formData });
@@ -1065,6 +1082,9 @@ function formatDateForDisplay(ymd) {
 
 async function fetchSocialMetadata(sourceUrl) {
   const hint = $('#sourceHint');
+  hint.textContent = COST_NOTICE;
+  hint.classList.remove('hidden');
+  return;
   try {
     hint.textContent = 'Reading post metadata…';
     hint.classList.remove('hidden');
@@ -1096,12 +1116,9 @@ function updateSourceHint() {
   const hint = $('#sourceHint');
   const parsed = parseSocial(source);
   if (!source) { hint.classList.add('hidden'); clearTimeout(metadataTimer); return; }
-  hint.textContent = parsed ? 'Detected ' + socialPlatformLabel(parsed.platform) + '. The server will download one public media item and archive it in Google Cloud Storage.' : 'Use a public Facebook, X/Twitter, Instagram, or TikTok post URL.';
+  hint.textContent = COST_NOTICE;
   hint.classList.remove('hidden');
   clearTimeout(metadataTimer);
-  if (parsed) {
-    metadataTimer = setTimeout(() => fetchSocialMetadata(source), 600);
-  }
 }
 
 const pendingItems = new Map();
@@ -1208,6 +1225,10 @@ function validateForm() {
 
 async function submitItem(e) {
   e.preventDefault();
+  if (selectedMediaType() !== 'document' && currentMode() === 'import') { showErrors([COST_NOTICE]); return; }
+  const hostingConfig = await mapConfigPromise;
+  if (!hostingConfig.directUploadsEnabled) { showErrors(['Uploads are temporarily unavailable while the archive moves to its new hosting. Existing evidence remains available to browse.']); return; }
+  if (hostingConfig.maxUploadBytes && Array.from($('#mediaFile').files).some(file => file.size > hostingConfig.maxUploadBytes)) { showErrors(['Please choose files smaller than 20 MB each.']); return; }
   const errors = validateForm();
   showErrors(errors);
   if (errors.length) return;

@@ -18,6 +18,7 @@ const { downloadSocialMedia, cleanupDownloadedMedia, extractSocialMetadata } = r
 const { createVideoThumbnail, removeFile: removeThumbnailFile } = require('./media-thumbnail');
 
 const app = express();
+const COST_NOTICE = 'Because of high costs, I’m reworking this feature and hope to make it available again soon.';
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '64kb' }));
@@ -242,6 +243,7 @@ async function archiveVideoThumbnail(filepath, filename) {
 
 const thumbnailJobs = new Set();
 function scheduleMissingVideoThumbnail(item) {
+  return; // Video processing is paused during the move to free hosting.
   const isGcsVideo = item.storage_type === 'gcs'
     && /^video\//i.test(item.mime_type || '')
     && item.drive_file_id
@@ -401,6 +403,7 @@ app.post('/api/extract-gps', exifUpload.single('image'), async (req, res) => {
 });
 
 app.get('/api/social-metadata', async (req, res) => {
+  return res.status(503).json({ error: COST_NOTICE });
   const url = typeof req.query.url === 'string' ? req.query.url.trim() : '';
   if (!url || !parseSocialLink(url)) {
     return res.status(400).json({ error: 'Provide a valid public Facebook, X/Twitter, Instagram, or TikTok post URL.' });
@@ -547,6 +550,7 @@ async function createItemHandler(req, res) {
   const body = req.body || {};
   const directUpload = Boolean(req.file);
   const hasSourceUrl = typeof body.source_url === 'string' && body.source_url.trim() !== '';
+  if (hasSourceUrl && !directUpload && !body.drive_url && parseSocialLink(body.source_url)) return res.status(503).json({ error: COST_NOTICE });
 
   // Honeypot: bots fill the hidden "website" field. Answer with a fake success
   // and store nothing, so bots never learn they were detected.
@@ -663,9 +667,7 @@ async function createItemHandler(req, res) {
         mimeType: req.file.mimetype,
         folderKey,
       });
-      const thumbnailUrl = /^video\//i.test(req.file.mimetype || '')
-        ? await archiveVideoThumbnail(req.file.path, req.file.originalname)
-        : '';
+      const thumbnailUrl = ''; // Keep direct video uploads without FFmpeg processing.
       stored = {
         storage_type: result.driveUrl.startsWith('https://storage.googleapis.com/') ? 'gcs' : 'drive',
         drive_url: result.driveUrl,

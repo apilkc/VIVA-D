@@ -230,7 +230,7 @@ test('rejects a source-only submission without a social URL', async () => {
   assert.ok(data.errors.some((e) => /photo or video|choose a local file or provide/i.test(e)));
 });
 
-test('returns a clear error for social imports without Drive configuration', async () => {
+test('pauses social imports with the cost notice before downloading', async () => {
   const form = new FormData();
   form.append('source_url', 'https://x.com/example/status/123456');
   form.append('title', 'Social import test');
@@ -240,7 +240,7 @@ test('returns a clear error for social imports without Drive configuration', asy
   const res = await fetch(`${base}/api/items`, { method: 'POST', body: form });
   assert.equal(res.status, 503);
   const data = await res.json();
-  assert.match(data.error, /not configured/i);
+  assert.match(data.error, /high costs.*reworking.*available again soon/i);
 });
 
 test('returns a clear error for direct uploads without Drive configuration', async () => {
